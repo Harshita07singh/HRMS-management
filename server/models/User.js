@@ -32,8 +32,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["admin", "manager", "employee"],
-      default: "employee",
+      enum: ["Admin", "HR", "Employee"],
+      default: "Employee",
     },
     managerId: { type: String, default: null },
     refreshToken: { type: String, default: null }, // store refresh token

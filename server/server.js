@@ -6,7 +6,7 @@ import authRoutes from "./routes/authRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import dotenv from "dotenv";
 
-// import leaveRoutes from "./routes/leaveRoutes.js";
+import leaveRoutes from "./routes/leaveRoutes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -25,7 +25,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 
 app.use("/api/employees", employeeRoutes);
-// app.use("/api/leaves", leaveRoutes);
+app.use("/api/leaves", leaveRoutes);
 app.get("/", (req, res) => {
   res.send("Hello,  Your server is running 🚀");
 });

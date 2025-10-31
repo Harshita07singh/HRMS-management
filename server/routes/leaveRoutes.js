@@ -1,11 +1,33 @@
-// routes/leaveRoutes.js
-// import express from "express";
-// import { applyLeave, getLeaves, updateLeaveStatus } from "../controllers/leaveController.js";
-// import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
-// const router = express.Router();
+import express from "express";
+import {
+  applyLeave,
+  getAllLeaves,
+  getMyLeaves,
+  updateLeaveStatus,
+} from "../controllers/leaveController.js";
+import {
+  authMiddleware,
+  authorizeRoles,
+} from "../middleware/authMiddleware.js";
 
-// router.post("/", protect, applyLeave);
-// router.get("/", protect, getLeaves);
-// router.put("/:id/status", protect, authorizeRoles("manager", "admin"), updateLeaveStatus);
+const router = express.Router();
 
-// export default router;
+// 🧑‍🏭 Employee routes
+router.post("/apply", authMiddleware, authorizeRoles("Employee"), applyLeave);
+router.get(
+  "/my-leaves",
+  authMiddleware,
+  authorizeRoles("Employee"),
+  getMyLeaves
+);
+
+// 👩‍💼 Admin/HR routes
+router.get("/", authMiddleware, authorizeRoles("Admin", "HR"), getAllLeaves);
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  authorizeRoles("Admin", "HR"),
+  updateLeaveStatus
+);
+
+export default router;
