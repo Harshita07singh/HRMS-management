@@ -1,28 +1,3 @@
-// import mongoose from "mongoose";
-// import bcrypt from "bcryptjs";
-
-// const userSchema = new mongoose.Schema(
-//   {
-//     name: String,
-//     email: { type: String, unique: true },
-//     password: String,
-//   },
-//   { timestamps: true }
-// );
-
-// userSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) return next();
-//   this.password = await bcrypt.hash(this.password, 10);
-//   next();
-// });
-
-// userSchema.methods.comparePassword = function (candidatePassword) {
-//   return bcrypt.compare(candidatePassword, this.password);
-// };
-
-// const User = mongoose.model("User", userSchema);
-// export default User;
-
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -32,11 +7,11 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["Admin", "HR", "Employee"],
+      enum: ["Admin", "Project Manager", "Employee"],
       default: "Employee",
     },
     managerId: { type: String, default: null },
-    refreshToken: { type: String, default: null }, // store refresh token
+    refreshToken: { type: String, default: null },
   },
   { timestamps: true }
 );

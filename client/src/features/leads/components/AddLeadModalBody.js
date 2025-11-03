@@ -20,7 +20,7 @@ const INITIAL_LEAD_OBJ = {
   emplymenttype: "",
   status: "",
   document: "",
-  roles: "",
+  role: "",
 };
 
 function AddLeadModalBody({ closeModal }) {
@@ -43,7 +43,7 @@ function AddLeadModalBody({ closeModal }) {
         const data = await response.json();
 
         const filteredManagers = data.filter((emp) =>
-          ["Project Manager"].includes(emp.roles)
+          ["Project Manager"].includes(emp.role)
         );
 
         setManagers(filteredManagers);
@@ -80,7 +80,7 @@ function AddLeadModalBody({ closeModal }) {
         emplymenttype: leadObj.emplymenttype,
         status: leadObj.status,
         document: leadObj.document,
-        roles: leadObj.roles, // or use UUID
+        role: leadObj.role, // or use UUID
       };
 
       try {
@@ -290,10 +290,10 @@ function AddLeadModalBody({ closeModal }) {
           Roles
         </label>
         <select
-          value={leadObj.roles}
+          value={leadObj.role}
           onChange={(e) =>
             updateFormValue({
-              updateType: "roles",
+              updateType: "role",
               value: e.target.value,
             })
           }

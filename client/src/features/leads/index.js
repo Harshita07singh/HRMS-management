@@ -13,6 +13,7 @@ import { showNotification } from "../common/headerSlice";
 import { useState } from "react";
 
 const TopSideButtons = () => {
+  const role = localStorage.getItem("role");
   const dispatch = useDispatch();
 
   const openAddNewLeadModal = () => {
@@ -26,12 +27,14 @@ const TopSideButtons = () => {
 
   return (
     <div className="inline-block float-right">
-      <button
-        className="btn px-6 btn-sm normal-case btn-primary"
-        onClick={() => openAddNewLeadModal()}
-      >
-        Add New
-      </button>
+      {role !== "Employee" && (
+        <button
+          className="btn px-6 btn-sm normal-case btn-primary"
+          onClick={() => openAddNewLeadModal()}
+        >
+          Add New
+        </button>
+      )}
     </div>
   );
 };
@@ -129,7 +132,7 @@ function Leads() {
                     <td>{l.department}</td>
                     <td>{l.designation}</td>
                     <td>{l.reportingmanager}</td>
-                    <td>{l.roles}</td>
+                    <td>{l.role}</td>
                     <td>{l.emplymenttype}</td>
                     <td>
                       <div className="badge">{l.status || "N/A"}</div>

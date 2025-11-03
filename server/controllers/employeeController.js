@@ -1,74 +1,43 @@
 import Employee from "../models/Employee.js";
 
-// Get all employees
+import User from "../models/User.js";
+//  Role-based Employee Fetch
 export const getAllEmployees = async (req, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const { role, email, name } = req.user;
 
-    const { role, name, email } = req.user;
-    console.log("Logged-in user:", req.user);
     let employees;
+
     if (role === "Admin") {
+      // Admin → all employees
       employees = await Employee.find();
     } else if (role === "Project Manager") {
-      employees = await Employee.find({ reportingmanager: name });
+      // PM → self + employees reporting to them
+      employees = await Employee.find({
+        $or: [
+          { email: email }, // self
+          { reportingmanager: name }, // employees under them
+        ],
+      });
+    } else if (role === "Employee") {
+      // Employee → only their own profile
+      employees = await Employee.find({ email: req.user.email });
     } else {
-      // Other users see only their own record
-      employees = await Employee.find({ email });
+      return res.status(403).json({ message: "Access denied" });
     }
 
     res.status(200).json(employees);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching employees:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// export const getAllEmployees = async (req, res) => {
-//   try {
-//     if (!req.user) {
-//       return res.status(401).json({ message: "Unauthorized" });
-//     }
-
-//     const { role, employeeId, email } = req.user;
-//     let employees;
-
-//     if (role === "Admin") {
-//       employees = await Employee.find().populate(
-//         "reportingmanager",
-//         "fullname email"
-//       );
-//     } else if (
-//       role === "Project Manager" &&
-//       reportingmanager?.role === "Project Manager"
-//     ) {
-//       if (!employeeId) {
-//         return res
-//           .status(400)
-//           .json({ message: "Employee record not found for this user" });
-//       }
-
-//       const pmId = new mongoose.Types.ObjectId(employeeId);
-
-//       employees = await Employee.find({
-//         $or: [{ reportingmanager: pmId }, { _id: pmId }],
-//       }).populate("reportingmanager", "fullname email");
-//     } else {
-//       employees = await Employee.find({ email }).populate(
-//         "reportingmanager",
-//         "fullname email"
-//       );
-//     }
-
-//     return res.status(200).json(employees);
-//   } catch (err) {
-//     console.error("Error fetching employees:", err);
-//     return res.status(500).json({ error: err.message });
-//   }
-// };
+//  Fetch Project Managers
 
 export const getProjectManagers = async (req, res) => {
   try {
-    const managers = await Employee.find({ roles: "Project Manager" });
+    const managers = await Employee.find({ role: "Project Manager" });
     res.status(200).json(managers);
   } catch (error) {
     console.error("Error fetching project managers:", error);

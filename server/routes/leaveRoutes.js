@@ -12,21 +12,29 @@ import {
 
 const router = express.Router();
 
-// 🧑‍🏭 Employee routes
-router.post("/apply", authMiddleware, authorizeRoles("Employee"), applyLeave);
+router.post(
+  "/apply",
+  authMiddleware,
+  authorizeRoles("Employee", "Project Manager"),
+  applyLeave
+);
 router.get(
   "/my-leaves",
   authMiddleware,
-  authorizeRoles("Employee"),
+  authorizeRoles("Employee", "Project Manager"),
   getMyLeaves
 );
 
-// 👩‍💼 Admin/HR routes
-router.get("/", authMiddleware, authorizeRoles("Admin", "HR"), getAllLeaves);
+router.get(
+  "/",
+  authMiddleware,
+  authorizeRoles("Admin", "Project Manager"),
+  getAllLeaves
+);
 router.patch(
   "/:id/status",
   authMiddleware,
-  authorizeRoles("Admin", "HR"),
+  authorizeRoles("Admin", "Project Manager"),
   updateLeaveStatus
 );
 

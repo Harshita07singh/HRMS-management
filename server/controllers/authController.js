@@ -34,6 +34,7 @@ export const login = async (req, res) => {
       {
         id: user._id,
         role: user.role,
+        email: user.email,
         name: user.name,
         employeeId: employee ? employee._id : null,
       },

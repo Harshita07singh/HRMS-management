@@ -7,9 +7,14 @@ const leaveSchema = new mongoose.Schema(
       ref: "Employee",
       required: true,
     },
+
+    employeeid: {
+      type: String,
+      required: true,
+    },
     leaveType: {
       type: String,
-      enum: ["Sick", "Casual", "Earned", "Unpaid"],
+      enum: ["Full Day", "Half Day"],
       required: true,
     },
     startDate: {
@@ -30,7 +35,8 @@ const leaveSchema = new mongoose.Schema(
       default: "Pending",
     },
     approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
+      enum: ["Admin", "Project Manager"],
       ref: "User",
     },
   },

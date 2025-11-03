@@ -1,10 +1,10 @@
 import Leave from "../models/Leave.js";
 import Employee from "../models/Employee.js";
 
-// Apply for leave (Employee)
+//  Apply for leave (Employee)
 export const applyLeave = async (req, res) => {
   try {
-    const { leaveType, startDate, endDate, reason } = req.body;
+    const { leaveType, startDate, endDate, reason, employeeid } = req.body;
     const employeeId = req.user.employeeId;
 
     if (!employeeId)
@@ -14,6 +14,7 @@ export const applyLeave = async (req, res) => {
 
     const leave = await Leave.create({
       employee: employeeId,
+      employeeid,
       leaveType,
       startDate,
       endDate,
@@ -26,30 +27,80 @@ export const applyLeave = async (req, res) => {
   }
 };
 
-// View all leaves (Admin or HR)
+//  Get all leaves (Role-based)
 export const getAllLeaves = async (req, res) => {
   try {
-    const leaves = await Leave.find()
-      .populate("employee", "name email")
-      .populate("approvedBy", "name role");
-    res.json(leaves);
+    const { role, name, email } = req.user;
+    let leaves = [];
+
+    if (role === "Admin") {
+      //  Admin sees all leaves
+      leaves = await Leave.find()
+        .populate(
+          "employee",
+          "employee_id fullname email role reportingmanager"
+        )
+        .populate("approvedBy", "name role");
+    } else if (role === "Project Manager") {
+      //  Project Manager sees only own + team members' leaves
+      const manager = await Employee.findOne({ email });
+      if (!manager)
+        return res.status(404).json({ message: "Manager record not found" });
+
+      // Find employees who report to this manager
+      const team = await Employee.find({
+        reportingmanager: manager.fullname,
+      }).select("_id");
+
+      const teamIds = team.map((t) => t._id);
+
+      leaves = await Leave.find({
+        $or: [{ employee: { $in: teamIds } }, { "employee.email": email }],
+      })
+        .populate(
+          "employee",
+          "employee_id fullname email role reportingmanager"
+        )
+        .populate("approvedBy", "name role");
+    } else if (role === "Employee") {
+      //  Employee sees only their own leaves
+      const employee = await Employee.findOne({ email });
+      if (!employee)
+        return res.status(404).json({ message: "Employee not found" });
+
+      leaves = await Leave.find({ employee: employee._id })
+        .populate(
+          "employee",
+          "employee_id fullname email role reportingmanager"
+        )
+        .populate("approvedBy", "name role");
+    } else {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    res.status(200).json(leaves);
   } catch (err) {
+    console.error("Error fetching leaves:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// View own leaves (Employee)
+//  View own leaves (Employee)
 export const getMyLeaves = async (req, res) => {
   try {
     const employeeId = req.user.employeeId;
-    const leaves = await Leave.find({ employee: employeeId });
+
+    const leaves = await Leave.find({ employee: employeeId })
+      .populate("employee", "employee_id fullname email role")
+      .populate("approvedBy", "name role");
+
     res.json(leaves);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Approve or reject leave (Admin / Manager)
+//  Approve or Reject Leave (Admin / PM)
 export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
