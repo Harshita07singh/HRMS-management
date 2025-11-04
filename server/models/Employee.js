@@ -27,6 +27,10 @@ const employeeSchema = new mongoose.Schema({
     type: String,
     enum: ["Admin", "Project Manager", "Employee", "Team Lead"],
   },
+  available_PL: {
+    type: Number,
+    default: 12,
+  },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 

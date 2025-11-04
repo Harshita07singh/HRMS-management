@@ -7,6 +7,7 @@ const Leave = () => {
   const role = localStorage.getItem("role");
 
   const [leaves, setLeaves] = useState([]);
+  const [employeeData, setEmployeeData] = useState(null);
   const [form, setForm] = useState({
     employeeid: "",
     leaveType: "",
@@ -24,6 +25,7 @@ const Leave = () => {
     if (!token) navigate("/login");
   }, [token, navigate]);
 
+  // Fetch leaves (and employee data)
   const fetchLeaves = async () => {
     try {
       const url =
@@ -37,7 +39,13 @@ const Leave = () => {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch leaves");
-      setLeaves(data);
+
+      if (role === "Employee" && data.employee) {
+        setEmployeeData(data.employee);
+        setLeaves(data.leaves);
+      } else {
+        setLeaves(data);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -45,8 +53,9 @@ const Leave = () => {
 
   useEffect(() => {
     fetchLeaves();
-  }, []); 
+  }, []);
 
+  // Apply Leave
   const handleApply = async (e) => {
     e.preventDefault();
     setError("");
@@ -77,6 +86,17 @@ const Leave = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Leave application failed");
 
+      // ⚠️ Show unpaid leave warning
+      if (data.unpaidWarning) {
+        const confirmLeave = window.confirm(
+          "You have not any paid leave left.\nIf you take leave now, it will be marked as unpaid leave.\nDo you still want to continue?"
+        );
+        if (!confirmLeave) {
+          setLoading(false);
+          return;
+        }
+      }
+
       setSuccess("Leave applied successfully!");
       setForm({
         employeeid: "",
@@ -94,6 +114,7 @@ const Leave = () => {
     }
   };
 
+  // Approve/Reject Leave
   const handleStatusChange = async (id, status) => {
     try {
       const res = await fetch(`http://localhost:4000/api/leaves/${id}/status`, {
@@ -119,7 +140,16 @@ const Leave = () => {
     <div className="min-h-screen bg-base-200 py-10 px-4 md:px-8">
       <div className="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg">
         <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-          <h1 className="text-2xl font-bold">Leave Management</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Leave Management</h1>
+            {role === "Employee" && (
+              <p className="text-sm text-gray-500 mt-1">
+                Available Paid Leaves:{"  "}
+                <strong>{employeeData?.available_PL ?? "-"}</strong>
+              </p>
+            )}
+          </div>
+
           {role !== "Admin" && role !== "Project Manager" && (
             <button
               onClick={() => setIsModalOpen(true)}
@@ -129,20 +159,21 @@ const Leave = () => {
             </button>
           )}
         </div>
-        {/* Leave List */}
+
+        {/* Leave Table */}
         <div>
           <h2 className="text-xl font-semibold mb-4">All Leave Requests</h2>
-
-          {/* ✅ Scrollable Table */}
           <div className="overflow-x-auto w-full">
-            <table className="table table-zebra w-full border  border-gray-300 text-sm ">
+            <table className="table table-zebra w-full border border-gray-300 text-sm">
               <thead className="bg-base-300 text-gray-800">
                 <tr>
                   <th>#</th>
                   {role !== "Employee" && <th>Employee</th>}
-                  <th>Type Of Leave</th> <th>Start</th> <th>End</th>
-                  <th>Status of leave </th>
-                  {role !== "Employee" && <th>Actions For Leave</th>}
+                  <th>Type</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Status</th>
+                  {role !== "Employee" && <th>Actions</th>}
                   <th>View</th>
                 </tr>
               </thead>
@@ -161,23 +192,26 @@ const Leave = () => {
                   leaves.map((leave, index) => (
                     <tr key={leave._id} className="hover:bg-gray-50">
                       <td>{index + 1}</td>
+
                       {role !== "Employee" && (
                         <td>
                           {leave.employee ? (
-                            <p className="font-medium">
-                              {leave.employee.fullname || leave.employee.name}
-                              <br />
-                              <span className="text-xs text-gray-500">
-                                {leave.employee.email}
-                              </span>
-                            </p>
+                            <div>
+                              <p className="font-medium">
+                                {leave.employee.fullname || leave.employee.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                ID: {leave.employee.employee_id || "N/A"}
+                              </p>
+                            </div>
                           ) : (
                             "N/A"
                           )}
                         </td>
                       )}
-                      <td>{leave.leaveType}</td>{" "}
-                      <td>{new Date(leave.startDate).toLocaleDateString()}</td>{" "}
+
+                      <td>{leave.leaveType}</td>
+                      <td>{new Date(leave.startDate).toLocaleDateString()}</td>
                       <td>{new Date(leave.endDate).toLocaleDateString()}</td>
                       <td>
                         <span
@@ -192,38 +226,30 @@ const Leave = () => {
                           {leave.status}
                         </span>
                       </td>
+
                       {role !== "Employee" && (
                         <td>
-                          {!(
-                            role === "Project Manager" &&
-                            leave.employee?._id ===
-                              localStorage.getItem("userId")
-                          ) ? (
-                            <div className="flex gap-2 justify-start">
-                              <button
-                                onClick={() =>
-                                  handleStatusChange(leave._id, "Approved")
-                                }
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs shadow-md transition-all duration-200"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleStatusChange(leave._id, "Rejected")
-                                }
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs shadow-md transition-all duration-200"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 italic text-xs">
-                              Own request
-                            </span>
-                          )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handleStatusChange(leave._id, "Approved")
+                              }
+                              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleStatusChange(leave._id, "Rejected")
+                              }
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs"
+                            >
+                              Reject
+                            </button>
+                          </div>
                         </td>
                       )}
+
                       <td>
                         <button
                           onClick={() => setSelectedLeave(leave)}
@@ -239,11 +265,12 @@ const Leave = () => {
             </table>
           </div>
         </div>
+
         {error && <p className="text-red-500 mt-3">{error}</p>}
         {success && <p className="text-green-600 mt-3">{success}</p>}
       </div>
 
-      {/* ✅ Apply Leave Modal */}
+      {/* Apply Leave Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
@@ -360,7 +387,7 @@ const Leave = () => {
         </div>
       )}
 
-      {/* ✅ View Leave Details Modal */}
+      {/* View Leave Details */}
       {selectedLeave && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
@@ -393,11 +420,11 @@ const Leave = () => {
                 <strong>Leave Type:</strong> {selectedLeave.leaveType}
               </p>
               <p>
-                <strong>Start Date:</strong>{" "}
+                <strong>Start:</strong>{" "}
                 {new Date(selectedLeave.startDate).toLocaleDateString()}
               </p>
               <p>
-                <strong>End Date:</strong>{" "}
+                <strong>End:</strong>{" "}
                 {new Date(selectedLeave.endDate).toLocaleDateString()}
               </p>
               <p>

@@ -18,6 +18,7 @@ router.post(
   authorizeRoles("Employee", "Project Manager"),
   applyLeave
 );
+
 router.get(
   "/my-leaves",
   authMiddleware,
@@ -31,6 +32,7 @@ router.get(
   authorizeRoles("Admin", "Project Manager"),
   getAllLeaves
 );
+
 router.patch(
   "/:id/status",
   authMiddleware,

@@ -7,11 +7,11 @@ import employeeRoutes from "./routes/employeeRoutes.js";
 import dotenv from "dotenv";
 
 import leaveRoutes from "./routes/leaveRoutes.js";
+
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 connectDB();
-// Middleware to parse JSON
 
 app.use(
   cors({
