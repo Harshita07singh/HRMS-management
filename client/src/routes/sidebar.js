@@ -38,6 +38,11 @@ const routes = [
     icon: <CurrencyDollarIcon className={iconClasses} />, // icon component
     name: "Salary", // name that appear in Sidebar
   },
+  {
+    path: "/app/invoice", // url
+    icon: <CurrencyDollarIcon className={iconClasses} />, // icon component
+    name: "Invoice", // name that appear in Sidebar
+  },
 
   {
     path: "/app/attendence", // url

@@ -10,6 +10,7 @@ const Charts = lazy(() => import("../pages/protected/Charts"));
 const Leads = lazy(() => import("../pages/protected/Leads"));
 const Integration = lazy(() => import("../pages/protected/Integration"));
 const Attendence = lazy(() => import("../pages/protected/attendence"));
+const Invoice = lazy(() => import("../pages/protected/invoice"));
 const Leave = lazy(() => import("../pages/protected/Leave"));
 const Calendar = lazy(() => import("../pages/protected/Calendar"));
 const Team = lazy(() => import("../pages/protected/Team"));
@@ -46,6 +47,10 @@ const routes = [
   {
     path: "/leave",
     component: Leave,
+  },
+  {
+    path: "/invoice",
+    component: Invoice,
   },
   {
     path: "/calendar",
