@@ -1,6 +1,6 @@
 import Leave from "../models/Leave.js";
 import Employee from "../models/Employee.js";
-
+import Attendance from "../models/Attendence.js";
 // Apply for leave (Employee)
 export const applyLeave = async (req, res) => {
   try {
@@ -96,6 +96,57 @@ export const getMyLeaves = async (req, res) => {
 };
 
 // Approve or reject leave
+// export const updateLeaveStatus = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { status } = req.body;
+
+//     if (!["Approved", "Rejected"].includes(status))
+//       return res.status(400).json({ message: "Invalid status" });
+
+//     const leave = await Leave.findById(id).populate("employee");
+
+//     if (!leave) return res.status(404).json({ message: "Leave not found" });
+
+//     // ✅ When leave is approved, deduct PLs
+//     if (status === "Approved") {
+//       const employee = await Employee.findById(leave.employee._id);
+
+//       // calculate number of leave days
+//       let leaveDays = 0.5;
+//       if (leave.leaveType === "Full Day") {
+//         const diff =
+//           (new Date(leave.endDate) - new Date(leave.startDate)) /
+//             (1000 * 60 * 60 * 24) +
+//           1;
+//         leaveDays = diff;
+//       }
+
+//       // if employee has enough PL
+//       if (employee.available_PL >= leaveDays) {
+//         employee.available_PL -= leaveDays;
+//         leave.isPaid = true;
+//       } else {
+//         leave.isPaid = false; // unpaid leave
+//       }
+
+//       await employee.save();
+//     }
+
+//     leave.status = status;
+//     leave.approvedBy = req.user.id;
+//     await leave.save();
+
+//     res.json({
+//       message: `Leave ${status.toLowerCase()} successfully`,
+//       leave,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// Approve or reject leave
 export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -105,24 +156,20 @@ export const updateLeaveStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
 
     const leave = await Leave.findById(id).populate("employee");
-
     if (!leave) return res.status(404).json({ message: "Leave not found" });
 
-    // ✅ When leave is approved, deduct PLs
+    // ✅ When leave is approved
     if (status === "Approved") {
       const employee = await Employee.findById(leave.employee._id);
 
-      // calculate number of leave days
-      let leaveDays = 0.5;
-      if (leave.leaveType === "Full Day") {
-        const diff =
-          (new Date(leave.endDate) - new Date(leave.startDate)) /
-            (1000 * 60 * 60 * 24) +
-          1;
-        leaveDays = diff;
-      }
+      // Calculate number of leave days
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      const totalDays = (end - start) / (1000 * 60 * 60 * 24) + 1; // inclusive count
 
-      // if employee has enough PL
+      let leaveDays = leave.leaveType === "Half Day" ? 0.5 : totalDays;
+
+      // Deduct PLs if applicable
       if (employee.available_PL >= leaveDays) {
         employee.available_PL -= leaveDays;
         leave.isPaid = true;
@@ -131,8 +178,31 @@ export const updateLeaveStatus = async (req, res) => {
       }
 
       await employee.save();
+
+      // ✅ Create or update attendance records for leave days
+      const current = new Date(start);
+      while (current <= end) {
+        const date = new Date(current.toDateString());
+        const month = current.getMonth() + 1;
+        const year = current.getFullYear();
+
+        await Attendance.findOneAndUpdate(
+          { employeeId: employee._id, date },
+          {
+            $set: {
+              attendanceDay: "Leave",
+              month,
+              year,
+            },
+          },
+          { upsert: true, new: true }
+        );
+
+        current.setDate(current.getDate() + 1);
+      }
     }
 
+    // ✅ Update leave status and approver info
     leave.status = status;
     leave.approvedBy = req.user.id;
     await leave.save();

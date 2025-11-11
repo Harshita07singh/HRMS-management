@@ -7,6 +7,7 @@ import employeeRoutes from "./routes/employeeRoutes.js";
 import dotenv from "dotenv";
 import leaveRoutes from "./routes/leaveRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
+import attendanceRoutes from "./routes/attendenceRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/attendance", attendanceRoutes);
 app.get("/", (req, res) => {
   res.send("Hello,  Your server is running 🚀");
 });
