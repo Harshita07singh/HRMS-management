@@ -1,4 +1,4 @@
-/** Icons are imported separatly to reduce build time */
+/** Icons are imported separately to reduce build time */
 import BellIcon from "@heroicons/react/24/outline/BellIcon";
 import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
 import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
@@ -22,6 +22,9 @@ import DocumentDuplicateIcon from "@heroicons/react/24/outline/DocumentDuplicate
 const iconClasses = `h-6 w-6`;
 const submenuIconClasses = `h-5 w-5`;
 
+// 🧠 Get current user role from localStorage
+const userRole = localStorage.getItem("role");
+
 const routes = [
   {
     path: "/app/dashboard",
@@ -29,51 +32,57 @@ const routes = [
     name: "Dashboard",
   },
   {
-    path: "/app/leads", // url
-    icon: <InboxArrowDownIcon className={iconClasses} />, // icon component
-    name: "Employee", // name that appear in Sidebar
+    path: "/app/leads",
+    icon: <InboxArrowDownIcon className={iconClasses} />,
+    name: "Employee",
+  },
+
+  // ✅ Show Payroll only if role === "Admin"
+  ...(userRole === "Admin"
+    ? [
+        {
+          path: "/app/transactions",
+          icon: <CurrencyDollarIcon className={iconClasses} />,
+          name: "Payroll",
+        },
+      ]
+    : []),
+
+  {
+    path: "/app/invoice",
+    icon: <CurrencyDollarIcon className={iconClasses} />,
+    name: "Invoice",
   },
   {
-    path: "/app/transactions", // url
-    icon: <CurrencyDollarIcon className={iconClasses} />, // icon component
-    name: "Salary", // name that appear in Sidebar
+    path: "/app/attendence",
+    icon: <InboxArrowDownIcon className={iconClasses} />,
+    name: "Attendence",
   },
   {
-    path: "/app/invoice", // url
-    icon: <CurrencyDollarIcon className={iconClasses} />, // icon component
-    name: "Invoice", // name that appear in Sidebar
+    path: "/app/leave",
+    icon: <InboxArrowDownIcon className={iconClasses} />,
+    name: "Leave",
+  },
+  {
+    path: "/app/charts",
+    icon: <ChartBarIcon className={iconClasses} />,
+    name: "Project Analytics",
+  },
+  {
+    path: "/app/integration",
+    icon: <BoltIcon className={iconClasses} />,
+    name: "Integration",
+  },
+  {
+    path: "/app/calendar",
+    icon: <CalendarDaysIcon className={iconClasses} />,
+    name: "Calendar",
   },
 
   {
-    path: "/app/attendence", // url
-    icon: <InboxArrowDownIcon className={iconClasses} />, // icon component
-    name: "Attendence ", // name that appear in Sidebar
-  },
-  {
-    path: "/app/leave", // url
-    icon: <InboxArrowDownIcon className={iconClasses} />, // icon component
-    name: "Leave", // name that appear in Sidebar
-  },
-  {
-    path: "/app/charts", // url
-    icon: <ChartBarIcon className={iconClasses} />, // icon component
-    name: "Project Analytics", // name that appear in Sidebar
-  },
-  {
-    path: "/app/integration", // url
-    icon: <BoltIcon className={iconClasses} />, // icon component
-    name: "Integration", // name that appear in Sidebar
-  },
-  {
-    path: "/app/calendar", // url
-    icon: <CalendarDaysIcon className={iconClasses} />, // icon component
-    name: "Calendar", // name that appear in Sidebar
-  },
-
-  {
-    path: "", //no url needed as this has submenu
-    icon: <DocumentDuplicateIcon className={`${iconClasses} inline`} />, // icon component
-    name: "Pages", // name that appear in Sidebar
+    path: "",
+    icon: <DocumentDuplicateIcon className={`${iconClasses} inline`} />,
+    name: "Pages",
     submenu: [
       {
         path: "/login",
@@ -81,9 +90,9 @@ const routes = [
         name: "Login",
       },
       {
-        path: "/register", //url
-        icon: <UserIcon className={submenuIconClasses} />, // icon component
-        name: "Register", // name that appear in Sidebar
+        path: "/register",
+        icon: <UserIcon className={submenuIconClasses} />,
+        name: "Register",
       },
       {
         path: "/forgot-password",
@@ -103,14 +112,14 @@ const routes = [
     ],
   },
   {
-    path: "", //no url needed as this has submenu
-    icon: <Cog6ToothIcon className={`${iconClasses} inline`} />, // icon component
-    name: "Settings", // name that appear in Sidebar
+    path: "",
+    icon: <Cog6ToothIcon className={`${iconClasses} inline`} />,
+    name: "Settings",
     submenu: [
       {
-        path: "/app/settings-profile", //url
-        icon: <UserIcon className={submenuIconClasses} />, // icon component
-        name: "Profile", // name that appear in Sidebar
+        path: "/app/settings-profile",
+        icon: <UserIcon className={submenuIconClasses} />,
+        name: "Profile",
       },
       {
         path: "/app/settings-billing",
@@ -118,21 +127,21 @@ const routes = [
         name: "Billing",
       },
       {
-        path: "/app/settings-team", // url
-        icon: <UsersIcon className={submenuIconClasses} />, // icon component
-        name: "Team Members", // name that appear in Sidebar
+        path: "/app/settings-team",
+        icon: <UsersIcon className={submenuIconClasses} />,
+        name: "Team Members",
       },
     ],
   },
   {
-    path: "", //no url needed as this has submenu
-    icon: <DocumentTextIcon className={`${iconClasses} inline`} />, // icon component
-    name: "Documentation", // name that appear in Sidebar
+    path: "",
+    icon: <DocumentTextIcon className={`${iconClasses} inline`} />,
+    name: "Documentation",
     submenu: [
       {
-        path: "/app/getting-started", // url
-        icon: <DocumentTextIcon className={submenuIconClasses} />, // icon component
-        name: "Getting Started", // name that appear in Sidebar
+        path: "/app/getting-started",
+        icon: <DocumentTextIcon className={submenuIconClasses} />,
+        name: "Getting Started",
       },
       {
         path: "/app/features",
