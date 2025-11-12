@@ -1,8 +1,10 @@
-// src/components/Payroll.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const API = axios.create({ baseURL: "http://localhost:4000/api" });
+const API = axios.create({
+  baseURL: "http://localhost:4000/api",
+});
+
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
   if (token) req.headers.Authorization = `Bearer ${token}`;
@@ -10,327 +12,258 @@ API.interceptors.request.use((req) => {
 });
 
 const Payroll = () => {
-  const [employees, setEmployees] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    employeeId: "",
-    payrollStart: "",
-    payrollEnd: "",
-    basicPay: "",
-    tax: 0,
-    bonus: 0,
-    extraDeduction: 0,
-  });
-  const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
+  const [showModal, setShowModal] = useState(false); // ✅ For popup
 
+  const [formData, setFormData] = useState({
+    employeeId: "",
+    startDate: "",
+    endDate: "",
+    basicPay: "",
+    bonus: "",
+    tax: "",
+  });
+
+  const role = localStorage.getItem("role");
+
+  // Restrict non-admins
   useEffect(() => {
-    fetchEmployees();
-    fetchPayrolls();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      const res = await API.get("/employees"); // assume you have employees endpoint
-      setEmployees(res.data);
-    } catch (err) {
-      console.error(err);
+    if (role !== "Admin") {
+      setMessage("Access restricted to admin users only.");
     }
-  };
+  }, [role]);
 
   const fetchPayrolls = async () => {
     try {
       setLoading(true);
-      const res = await API.get("/payroll");
+      const params = {};
+      if (month) params.month = month;
+      if (year) params.year = year;
+      if (search) params.search = search;
+
+      const res = await API.get("/payroll", { params });
       setPayrolls(res.data);
     } catch (err) {
-      console.error(err);
+      setMessage(err.response?.data?.message || "Failed to fetch payrolls");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    setMessage("");
+  const fetchEmployees = async () => {
     try {
-      // basic validation
-      if (
-        !form.employeeId ||
-        !form.payrollStart ||
-        !form.payrollEnd ||
-        !form.basicPay
-      ) {
-        setMessage("Please fill required fields");
-        return;
-      }
-      const payload = {
-        employeeId: form.employeeId,
-        payrollStart: form.payrollStart,
-        payrollEnd: form.payrollEnd,
-        basicPay: parseFloat(form.basicPay),
-        tax: parseFloat(form.tax) || 0,
-        bonus: parseFloat(form.bonus) || 0,
-        extraDeduction: parseFloat(form.extraDeduction) || 0,
-      };
-      const res = await API.post("/payroll/generate", payload);
+      const res = await API.get("/employees");
+      setEmployees(res.data);
+    } catch (err) {
+      console.error("Failed to load employees");
+    }
+  };
+
+  const handleGeneratePayroll = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post("/payroll/generate", formData);
       setMessage(res.data.message);
-      setForm({
+      setFormData({
         employeeId: "",
-        payrollStart: "",
-        payrollEnd: "",
+        startDate: "",
+        endDate: "",
         basicPay: "",
-        tax: 0,
-        bonus: 0,
-        extraDeduction: 0,
+        bonus: "",
+        tax: "",
       });
+      setShowModal(false);
       fetchPayrolls();
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to generate payroll");
     }
   };
 
+  useEffect(() => {
+    fetchPayrolls();
+    fetchEmployees();
+  }, [month, year, search]);
+
+  if (role !== "Admin") {
+    return (
+      <div className="flex justify-center items-center h-screen text-xl text-red-500">
+        {message}
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">
-        Payroll Management (Admin)
-      </h2>
-
-      {/* Create payroll */}
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <form
-          onSubmit={handleGenerate}
-          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+    <div className="p-6  min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Payroll Management</h2>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
         >
-          <div>
-            <label className="block text-sm">Employee</label>
-            <select
-              value={form.employeeId}
-              onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
-              className="border p-2 rounded w-full"
-            >
-              <option value="">Select employee</option>
-              {employees.map((emp) => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.fullname} ({emp.employee_id})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm">Payroll Start</label>
-            <input
-              type="date"
-              value={form.payrollStart}
-              onChange={(e) =>
-                setForm({ ...form, payrollStart: e.target.value })
-              }
-              className="border p-2 rounded w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm">Payroll End</label>
-            <input
-              type="date"
-              value={form.payrollEnd}
-              onChange={(e) => setForm({ ...form, payrollEnd: e.target.value })}
-              className="border p-2 rounded w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm">Basic Pay</label>
-            <input
-              type="number"
-              value={form.basicPay}
-              onChange={(e) => setForm({ ...form, basicPay: e.target.value })}
-              className="border p-2 rounded w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm">Tax (percent or fixed)</label>
-            <input
-              type="number"
-              value={form.tax}
-              onChange={(e) => setForm({ ...form, tax: e.target.value })}
-              className="border p-2 rounded w-full"
-            />
-            <small className="text-xs text-gray-500">
-              If between 0-100 it's treated as percent
-            </small>
-          </div>
-
-          <div>
-            <label className="block text-sm">Bonus</label>
-            <input
-              type="number"
-              value={form.bonus}
-              onChange={(e) => setForm({ ...form, bonus: e.target.value })}
-              className="border p-2 rounded w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm">Extra Deduction</label>
-            <input
-              type="number"
-              value={form.extraDeduction}
-              onChange={(e) =>
-                setForm({ ...form, extraDeduction: e.target.value })
-              }
-              className="border p-2 rounded w-full"
-            />
-          </div>
-
-          <div className="md:col-span-2 flex gap-2 pt-2">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Generate Payroll
-            </button>
-            <button
-              type="button"
-              onClick={fetchPayrolls}
-              className="bg-gray-200 px-4 py-2 rounded"
-            >
-              Refresh
-            </button>
-            <div className="text-sm text-green-600 ml-3">{message}</div>
-          </div>
-        </form>
+          + Generate Payroll
+        </button>
       </div>
 
-      {/* Payroll list */}
-      <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-3">Payroll Records</h3>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th className="py-1">Employee</th>
-                <th>Period</th>
-                <th>Basic</th>
-                <th>Unpaid Leaves</th>
-                <th>Deduction</th>
-                <th>Tax</th>
-                <th>Bonus</th>
-                <th>Net Pay</th>
-                <th>View</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payrolls.map((p) => (
-                <tr key={p._id} className="border-t">
-                  <td>
-                    {p.employeeId?.fullname} ({p.employeeId?.employee_id})
+      {/*  Filters */}
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
+        <input
+          type="text"
+          placeholder="Search by name/email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border rounded-lg px-3 py-2 w-64"
+        />
+        <div className="flex gap-3">
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="border rounded-lg px-3 py-2"
+          >
+            <option value="">Month</option>
+            {[...Array(12)].map((_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {new Date(0, i).toLocaleString("default", { month: "long" })}
+              </option>
+            ))}
+          </select>
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="border rounded-lg px-3 py-2"
+          >
+            <option value="">Year</option>
+            {[2023, 2024, 2025, 2026].map((y) => (
+              <option key={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/*  Payroll Table */}
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full shadow-md rounded-lg">
+          <thead className="bg-gray-100 text-gray-700">
+            <tr>
+              <th className="px-4 py-2">Employee</th>
+              <th className="px-4 py-2">Email</th>
+              <th className="px-4 py-2">Period</th>
+              <th className="px-4 py-2">Basic Pay</th>
+              <th className="px-4 py-2">Bonus</th>
+              <th className="px-4 py-2">Tax</th>
+              <th className="px-4 py-2">Deduction</th>
+              <th className="px-4 py-2">Net Pay</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payrolls.length > 0 ? (
+              payrolls.map((p, i) => (
+                <tr key={i} className="text-center border-b">
+                  <td className="px-4 py-2">{p.employeeId?.fullname || "—"}</td>
+                  <td className="px-4 py-2">{p.employeeId?.email || "—"}</td>
+                  <td className="px-4 py-2">
+                    {new Date(p.payrollStartDate).toLocaleDateString()} -{" "}
+                    {new Date(p.payrollEndDate).toLocaleDateString()}
                   </td>
-                  <td>
-                    {new Date(p.payrollStart).toLocaleDateString()} -{" "}
-                    {new Date(p.payrollEnd).toLocaleDateString()}
-                  </td>
-                  <td>{p.basicPay}</td>
-                  <td>{p.unpaidLeaveDays}</td>
-                  <td>{p.deductionForUnpaidLeaves}</td>
-                  <td>{p.taxAmount}</td>
-                  <td>{p.bonus}</td>
-                  <td className="font-semibold">{p.netPay}</td>
-                  <td>
-                    <button
-                      className="text-blue-600"
-                      onClick={() => setSelectedPayroll(p)}
-                    >
-                      View
-                    </button>
+                  <td className="px-4 py-2">₹{p.basicPay}</td>
+                  <td className="px-4 py-2">₹{p.bonus}</td>
+                  <td className="px-4 py-2">{p.tax}%</td>
+                  <td className="px-4 py-2 text-red-600">₹{p.deduction}</td>
+                  <td className="px-4 py-2 text-green-600 font-semibold">
+                    ₹{p.netPay}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            ) : (
+              <tr>
+                <td colSpan="8" className="text-center py-6 text-gray-500">
+                  No payroll records found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Payroll detail modal */}
-      {selectedPayroll && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow w-full max-w-2xl">
-            <h3 className="text-xl font-semibold mb-4">Payroll Detail</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <strong>Employee</strong>
-                <div>
-                  {selectedPayroll.employeeId?.fullname} (
-                  {selectedPayroll.employeeId?.employee_id})
-                </div>
-              </div>
-              <div>
-                <strong>Period</strong>
-                <div>
-                  {new Date(selectedPayroll.payrollStart).toLocaleDateString()}{" "}
-                  - {new Date(selectedPayroll.payrollEnd).toLocaleDateString()}
-                </div>
+      {message && (
+        <p className="text-center text-blue-600 mt-4 font-medium">{message}</p>
+      )}
+
+      {/*  Generate Payroll Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-red-600 text-xl"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-semibold mb-4 text-center">
+              Generate Monthly Payroll
+            </h3>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const res = await API.post("/payroll/generate", {
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                  });
+                  setMessage(res.data.message);
+                  setShowModal(false);
+                  fetchPayrolls();
+                } catch (err) {
+                  setMessage(
+                    err.response?.data?.message || "Failed to generate payroll"
+                  );
+                }
+              }}
+            >
+              <div className="flex flex-col gap-3">
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                  className="border rounded-lg px-3 py-2"
+                  required
+                />
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                  className="border rounded-lg px-3 py-2"
+                  required
+                />
               </div>
 
-              <div>
-                <strong>Basic Pay</strong>
-                <div>{selectedPayroll.basicPay}</div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Generate
+                </button>
               </div>
-              <div>
-                <strong>Total Working Days</strong>
-                <div>{selectedPayroll.totalWorkingDays}</div>
-              </div>
-
-              <div>
-                <strong>Present Days</strong>
-                <div>{selectedPayroll.presentDays}</div>
-              </div>
-              <div>
-                <strong>Paid Leave Days</strong>
-                <div>{selectedPayroll.paidLeaveDays}</div>
-              </div>
-
-              <div>
-                <strong>Unpaid Leave Days</strong>
-                <div>{selectedPayroll.unpaidLeaveDays}</div>
-              </div>
-              <div>
-                <strong>Deduction for Unpaid</strong>
-                <div>{selectedPayroll.deductionForUnpaidLeaves}</div>
-              </div>
-
-              <div>
-                <strong>Tax</strong>
-                <div>{selectedPayroll.taxAmount}</div>
-              </div>
-              <div>
-                <strong>Bonus</strong>
-                <div>{selectedPayroll.bonus}</div>
-              </div>
-
-              <div>
-                <strong>Extra Deduction</strong>
-                <div>{selectedPayroll.extraDeduction}</div>
-              </div>
-              <div>
-                <strong>Net Pay</strong>
-                <div className="font-semibold">{selectedPayroll.netPay}</div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-right">
-              <button
-                onClick={() => setSelectedPayroll(null)}
-                className="bg-gray-200 px-4 py-2 rounded"
-              >
-                Close
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}

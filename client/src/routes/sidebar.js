@@ -22,8 +22,11 @@ import DocumentDuplicateIcon from "@heroicons/react/24/outline/DocumentDuplicate
 const iconClasses = `h-6 w-6`;
 const submenuIconClasses = `h-5 w-5`;
 
-// 🧠 Get current user role from localStorage
+//  Get current user role from localStorage
 const userRole = localStorage.getItem("role");
+
+//  Check if user is logged in
+const isLoggedIn = !!userRole; // true if role exists
 
 const routes = [
   {
@@ -37,7 +40,6 @@ const routes = [
     name: "Employee",
   },
 
-  // ✅ Show Payroll only if role === "Admin"
   ...(userRole === "Admin"
     ? [
         {
@@ -84,16 +86,24 @@ const routes = [
     icon: <DocumentDuplicateIcon className={`${iconClasses} inline`} />,
     name: "Pages",
     submenu: [
-      {
-        path: "/login",
-        icon: <ArrowRightOnRectangleIcon className={submenuIconClasses} />,
-        name: "Login",
-      },
-      {
-        path: "/register",
-        icon: <UserIcon className={submenuIconClasses} />,
-        name: "Register",
-      },
+      //  Hide Login & Register if user is already logged in
+      ...(!isLoggedIn
+        ? [
+            {
+              path: "/login",
+              icon: (
+                <ArrowRightOnRectangleIcon className={submenuIconClasses} />
+              ),
+              name: "Login",
+            },
+            {
+              path: "/register",
+              icon: <UserIcon className={submenuIconClasses} />,
+              name: "Register",
+            },
+          ]
+        : []),
+
       {
         path: "/forgot-password",
         icon: <KeyIcon className={submenuIconClasses} />,

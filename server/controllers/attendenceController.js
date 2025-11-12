@@ -129,26 +129,6 @@ export const getMyAttendance = async (req, res) => {
   }
 };
 
-// Admin / Manager / HR - Get all attendance
-// export const getAllAttendance = async (req, res) => {
-//   try {
-//     const { month, year } = req.query;
-//     const query = {};
-//     if (month) query.month = parseInt(month);
-//     if (year) query.year = parseInt(year);
-
-//     const records = await Attendance.find(query)
-//       .populate(
-//         "employeeId",
-//         "employee_id fullname email department designation role"
-//       )
-//       .sort({ date: -1 });
-
-//     res.json(records);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 // Admin / Manager / Team Lead - Get all attendance with filters
 export const getAllAttendance = async (req, res) => {
   try {
@@ -159,7 +139,7 @@ export const getAllAttendance = async (req, res) => {
     if (month) query.month = parseInt(month);
     if (year) query.year = parseInt(year);
 
-    // ✅ Date filter (single specific day)
+    //  Date filter (single specific day)
     if (date) {
       const selectedDate = new Date(date);
       query.date = {
@@ -176,7 +156,7 @@ export const getAllAttendance = async (req, res) => {
       };
     }
 
-    // ✅ Search filter (by employee fullname or email)
+    //  Search filter (by employee fullname or email)
     let employeeFilter = {};
     if (search) {
       const searchRegex = new RegExp(search, "i"); // case-insensitive

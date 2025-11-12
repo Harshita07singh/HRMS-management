@@ -109,7 +109,7 @@ export default function InvoiceDashboard() {
 
   // === UI ===
   return (
-    <div className="max-w-6xl mx-auto mt-8 p-6 bg-white shadow-lg rounded-2xl">
+    <div className="max-w-6xl mx-auto mt-8 p-6  shadow-lg rounded-2xl">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Invoices</h2>
         <button
@@ -129,7 +129,7 @@ export default function InvoiceDashboard() {
         ) : (
           <table className="w-full border-collapse border text-left text-sm">
             <thead>
-              <tr className="bg-gray-100 text-gray-700">
+              <tr className=" ">
                 <th className="border p-2">Invoice No</th>
                 <th className="border p-2">Client</th>
                 <th className="border p-2">Email</th>

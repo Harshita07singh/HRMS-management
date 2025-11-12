@@ -122,14 +122,14 @@ const Attendance = () => {
   }, [month, year, searchTerm, searchDate]);
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 min-h-screen">
       <h2 className="text-2xl font-bold mb-4 text-center">
         Attendance Dashboard
       </h2>
 
-      {/* ✅ Filters for Admin/PM */}
+      {/*  Filters for Admin/PM */}
       {(role === "Admin" || role === "Project Manager") && (
-        <div className="bg-white shadow rounded-lg p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
+        <div className=" shadow rounded-lg p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
           <input
             type="text"
             placeholder="Search by Name or Email"
@@ -207,8 +207,8 @@ const Attendance = () => {
 
       {/* Attendance Table */}
       <div className="overflow-x-auto">
-        <table className="table-auto w-full bg-white shadow rounded-lg">
-          <thead className="bg-gray-100 text-gray-700">
+        <table className="table-auto w-full  shadow rounded-lg">
+          <thead className=" text-gray-700">
             <tr>
               {(role === "Admin" || role === "Project Manager") && (
                 <>
@@ -300,7 +300,7 @@ const Attendance = () => {
       {/* Breaks Popup Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-2xl shadow-lg w-96">
+          <div className=" p-6 rounded-2xl shadow-lg w-96">
             <h3 className="text-xl font-semibold mb-4 text-center">
               Break Details
             </h3>
@@ -318,7 +318,7 @@ const Attendance = () => {
               ))}
             </div>
 
-            {/* ✅ Show total + extended info */}
+            {/*  Show total + extended info */}
             <div className="mt-4 text-center">
               <p className="font-semibold">
                 Total Break Time: {selectedTotalBreak} min

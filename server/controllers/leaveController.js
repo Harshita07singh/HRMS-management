@@ -40,7 +40,7 @@ export const applyLeave = async (req, res) => {
   }
 };
 
-// 🟡 Get all leaves (Admin / PM)
+//Get all leaves (Admin / PM)
 export const getAllLeaves = async (req, res) => {
   try {
     const { role, email } = req.user;
@@ -74,7 +74,7 @@ export const getAllLeaves = async (req, res) => {
   }
 };
 
-// ✅ View own leaves (Employee)
+// View own leaves (Employee)
 export const getMyLeaves = async (req, res) => {
   try {
     const employeeId = req.user.employeeId;
@@ -96,57 +96,6 @@ export const getMyLeaves = async (req, res) => {
 };
 
 // Approve or reject leave
-// export const updateLeaveStatus = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { status } = req.body;
-
-//     if (!["Approved", "Rejected"].includes(status))
-//       return res.status(400).json({ message: "Invalid status" });
-
-//     const leave = await Leave.findById(id).populate("employee");
-
-//     if (!leave) return res.status(404).json({ message: "Leave not found" });
-
-//     // ✅ When leave is approved, deduct PLs
-//     if (status === "Approved") {
-//       const employee = await Employee.findById(leave.employee._id);
-
-//       // calculate number of leave days
-//       let leaveDays = 0.5;
-//       if (leave.leaveType === "Full Day") {
-//         const diff =
-//           (new Date(leave.endDate) - new Date(leave.startDate)) /
-//             (1000 * 60 * 60 * 24) +
-//           1;
-//         leaveDays = diff;
-//       }
-
-//       // if employee has enough PL
-//       if (employee.available_PL >= leaveDays) {
-//         employee.available_PL -= leaveDays;
-//         leave.isPaid = true;
-//       } else {
-//         leave.isPaid = false; // unpaid leave
-//       }
-
-//       await employee.save();
-//     }
-
-//     leave.status = status;
-//     leave.approvedBy = req.user.id;
-//     await leave.save();
-
-//     res.json({
-//       message: `Leave ${status.toLowerCase()} successfully`,
-//       leave,
-//     });
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
-// Approve or reject leave
 export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -158,7 +107,7 @@ export const updateLeaveStatus = async (req, res) => {
     const leave = await Leave.findById(id).populate("employee");
     if (!leave) return res.status(404).json({ message: "Leave not found" });
 
-    // ✅ When leave is approved
+    //  When leave is approved
     if (status === "Approved") {
       const employee = await Employee.findById(leave.employee._id);
 
@@ -179,7 +128,7 @@ export const updateLeaveStatus = async (req, res) => {
 
       await employee.save();
 
-      // ✅ Create or update attendance records for leave days
+      //  Create or update attendance records for leave days
       const current = new Date(start);
       while (current <= end) {
         const date = new Date(current.toDateString());
@@ -202,7 +151,7 @@ export const updateLeaveStatus = async (req, res) => {
       }
     }
 
-    // ✅ Update leave status and approver info
+    // Update leave status and approver info
     leave.status = status;
     leave.approvedBy = req.user.id;
     await leave.save();

@@ -1,9 +1,7 @@
-// routes/payrollRoutes.js
 import express from "express";
 import {
   generatePayroll,
-  listPayrolls,
-  getPayroll,
+  getAllPayrolls,
 } from "../controllers/payrollController.js";
 import {
   authMiddleware,
@@ -12,27 +10,19 @@ import {
 
 const router = express.Router();
 
-// Only Admin can create payrolls (you can add HR role if present)
+// Admin / PM can generate and view payroll
 router.post(
   "/generate",
   authMiddleware,
-  authorizeRoles("Admin"),
+  authorizeRoles("Admin", "Project Manager"),
   generatePayroll
 );
 
-// Admin/Manager can list payrolls
 router.get(
   "/",
   authMiddleware,
-  authorizeRoles("Admin", "Project Manager", "Team Lead"),
-  listPayrolls
-);
-
-router.get(
-  "/:id",
-  authMiddleware,
-  authorizeRoles("Admin", "Project Manager", "Team Lead"),
-  getPayroll
+  authorizeRoles("Admin", "Project Manager"),
+  getAllPayrolls
 );
 
 export default router;
