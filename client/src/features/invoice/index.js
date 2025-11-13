@@ -3,7 +3,7 @@ import axios from "axios";
 
 export default function InvoiceDashboard() {
   const axiosInstance = axios.create({
-    baseURL: "http://localhost:4000/api", // change if needed
+    baseURL: "http://localhost:4000/api", // adjust if needed
   });
 
   axiosInstance.interceptors.request.use((config) => {
@@ -16,6 +16,8 @@ export default function InvoiceDashboard() {
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
@@ -26,11 +28,13 @@ export default function InvoiceDashboard() {
 
   const GST_RATE = 18;
 
-  // === Fetch all invoices ===
-  const fetchInvoices = async () => {
+  // === Fetch Invoices ===
+  const fetchInvoices = async (query = "") => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get("/invoices");
+      const res = await axiosInstance.get(
+        `/invoices${query ? `?search=${query}` : ""}`
+      );
       setInvoices(res.data);
     } catch (err) {
       console.error(err);
@@ -44,7 +48,14 @@ export default function InvoiceDashboard() {
     fetchInvoices();
   }, []);
 
-  // === Handlers ===
+  // === Search Handler ===
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    fetchInvoices(value);
+  };
+
+  // === Item Handlers ===
   const handleItemChange = (index, field, value) => {
     const items = [...formData.items];
     items[index][field] = value;
@@ -107,17 +118,25 @@ export default function InvoiceDashboard() {
     }
   };
 
-  // === UI ===
   return (
-    <div className="max-w-6xl mx-auto mt-8 p-6  shadow-lg rounded-2xl">
+    <div className="max-w-6xl mx-auto mt-8 p-6 shadow-lg rounded-2xl">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Invoices</h2>
-        <button
-          onClick={() => setFormOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Create Invoice
-        </button>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Search by invoice no or email"
+            value={searchTerm}
+            onChange={handleSearch}
+            className="border px-3 py-2 rounded-lg w-72"
+          />
+          <button
+            onClick={() => setFormOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Create Invoice
+          </button>
+        </div>
       </div>
 
       {/* === Invoice Table === */}
@@ -129,7 +148,7 @@ export default function InvoiceDashboard() {
         ) : (
           <table className="w-full border-collapse border text-left text-sm">
             <thead>
-              <tr className=" ">
+              <tr>
                 <th className="border p-2">Invoice No</th>
                 <th className="border p-2">Client</th>
                 <th className="border p-2">Email</th>

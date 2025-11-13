@@ -2,6 +2,7 @@ import express from "express";
 import {
   generatePayroll,
   getAllPayrolls,
+  getPayrolls,
 } from "../controllers/payrollController.js";
 import {
   authMiddleware,
@@ -24,5 +25,6 @@ router.get(
   authorizeRoles("Admin", "Project Manager"),
   getAllPayrolls
 );
+router.get("/", authMiddleware, getPayrolls);
 
 export default router;

@@ -89,6 +89,12 @@ const Payroll = () => {
     fetchPayrolls();
     fetchEmployees();
   }, [month, year, search]);
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchPayrolls();
+    }, 400); // wait 400ms after typing before sending request
+    return () => clearTimeout(delayDebounce);
+  }, [month, year, search]);
 
   if (role !== "Admin") {
     return (
