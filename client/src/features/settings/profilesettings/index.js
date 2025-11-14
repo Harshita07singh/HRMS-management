@@ -1,51 +1,103 @@
-import moment from "moment"
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import TitleCard from "../../../components/Cards/TitleCard"
-import { showNotification } from '../../common/headerSlice'
-import InputText from '../../../components/Input/InputText'
-import TextAreaInput from '../../../components/Input/TextAreaInput'
-import ToogleInput from '../../../components/Input/ToogleInput'
+import { useEffect, useState } from "react";
+import axios from "axios";
+import moment from "moment";
+import TitleCard from "../../../components/Cards/TitleCard";
 
-function ProfileSettings(){
+export default function Profile() {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-    const dispatch = useDispatch()
-
-    // Call API to update profile settings changes
-    const updateProfile = () => {
-        dispatch(showNotification({message : "Profile Updated", status : 1}))    
+  const fetchProfile = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/api/employees/me");
+      setProfile(res.data);
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const updateFormValue = ({updateType, value}) => {
-        console.log(updateType)
-    }
+  if (loading || !profile) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
-    return(
-        <>
-            
-            <TitleCard title="Profile Settings" topMargin="mt-2">
+  const avatar = profile.fullname
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputText labelTitle="Name" defaultValue="Alex" updateFormValue={updateFormValue}/>
-                    <InputText labelTitle="Email Id" defaultValue="alex@dashwind.com" updateFormValue={updateFormValue}/>
-                    <InputText labelTitle="Title" defaultValue="UI/UX Designer" updateFormValue={updateFormValue}/>
-                    <InputText labelTitle="Place" defaultValue="California" updateFormValue={updateFormValue}/>
-                    <TextAreaInput labelTitle="About" defaultValue="Doing what I love, part time traveller" updateFormValue={updateFormValue}/>
-                </div>
-                <div className="divider" ></div>
+  return (
+    <TitleCard title="My Profile" topMargin="mt-2">
+      <div className="flex gap-6 items-center mb-8">
+        <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold shadow">
+          {avatar}
+        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputText labelTitle="Language" defaultValue="English" updateFormValue={updateFormValue}/>
-                    <InputText labelTitle="Timezone" defaultValue="IST" updateFormValue={updateFormValue}/>
-                    <ToogleInput updateType="syncData" labelTitle="Sync Data" defaultValue={true} updateFormValue={updateFormValue}/>
-                </div>
+        <div>
+          <h2 className="text-xl font-bold">{profile.fullname}</h2>
+          <p className="text-gray-500">{profile.email}</p>
+          <span className="badge badge-primary mt-2">{profile.role}</span>
+        </div>
+      </div>
 
-                <div className="mt-16"><button className="btn btn-primary float-right" onClick={() => updateProfile()}>Update</button></div>
-            </TitleCard>
-        </>
-    )
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-5 bg-base-200 rounded-lg shadow">
+          <h3 className="font-bold mb-3 text-lg">Personal Details</h3>
+          <p>
+            <strong>Employee ID:</strong> {profile.employee_id}
+          </p>
+          <p>
+            <strong>Gender:</strong> {profile.gender}
+          </p>
+          <p>
+            <strong>DOB:</strong> {moment(profile.DOB).format("DD MMM YYYY")}
+          </p>
+          <p>
+            <strong>Mobile:</strong> {profile.mobile_num}
+          </p>
+          <p>
+            <strong>Status:</strong> {profile.status}
+          </p>
+        </div>
+
+        <div className="p-5 bg-base-200 rounded-lg shadow">
+          <h3 className="font-bold mb-3 text-lg">Work Details</h3>
+          <p>
+            <strong>Department:</strong> {profile.department}
+          </p>
+          <p>
+            <strong>Designation:</strong> {profile.designation}
+          </p>
+          <p>
+            <strong>Reporting Manager:</strong>{" "}
+            {profile.reportingmanager || "—"}
+          </p>
+          <p>
+            <strong>Employment Type:</strong> {profile.emplymenttype}
+          </p>
+          <p>
+            <strong>Joining Date:</strong>{" "}
+            {moment(profile.joining_date).format("DD MMM YYYY")}
+          </p>
+        </div>
+
+        <div className="p-5 bg-base-200 rounded-lg shadow col-span-1 md:col-span-2">
+          <h3 className="font-bold mb-3 text-lg">Leave Details</h3>
+          <p>
+            <strong>Available PL:</strong> {profile.available_PL}
+          </p>
+        </div>
+      </div>
+    </TitleCard>
+  );
 }
-
-
-export default ProfileSettings

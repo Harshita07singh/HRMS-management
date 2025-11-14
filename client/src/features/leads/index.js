@@ -59,7 +59,7 @@ function Leads() {
     else return <div className="badge badge-ghost">Open</div>;
   };
 
-  const deleteCurrentLead = (index) => {
+  const deleteCurrentLead = (lead, index) => {
     dispatch(
       openModal({
         title: "Confirmation",
@@ -68,6 +68,7 @@ function Leads() {
           message: `Are you sure you want to delete this lead?`,
           type: CONFIRMATION_MODAL_CLOSE_TYPES.LEAD_DELETE,
           index,
+          _id: lead._id, // <-- IMPORTANT FIX
         },
       })
     );
@@ -141,7 +142,7 @@ function Leads() {
                     <td>
                       <button
                         className="btn btn-square btn-ghost"
-                        onClick={() => deleteCurrentLead(k)}
+                        onClick={() => deleteCurrentLead(l, k)}
                       >
                         <TrashIcon className="w-5" />
                       </button>

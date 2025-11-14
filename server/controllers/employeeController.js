@@ -80,3 +80,20 @@ export const deleteEmployee = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+export const getMyProfile = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    const employee = await Employee.findOne({ email: userEmail });
+
+    if (!employee) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    res.status(200).json(employee);
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

@@ -7,33 +7,48 @@ import MoonIcon from "@heroicons/react/24/outline/MoonIcon";
 import SunIcon from "@heroicons/react/24/outline/SunIcon";
 import { openRightDrawer } from "../features/common/rightDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../utils/globalConstantUtil";
-import { useNavigate } from "react-router-dom";
-import { NavLink, Routes, Link, useLocation, Navigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Header() {
-  const Navigate = useNavigate();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { noOfNotifications, pageTitle } = useSelector((state) => state.header);
+
   const [currentTheme, setCurrentTheme] = useState(
     localStorage.getItem("theme")
   );
+  const [profile, setProfile] = useState(null);
+
+  // Fetch logged-in employee profile
+  const getProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:4000/api/employees/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (res.ok) setProfile(data);
+    } catch (err) {
+      console.error("Failed to load profile", err);
+    }
+  };
+
+  useEffect(() => {
+    getProfile();
+  }, []);
 
   useEffect(() => {
     themeChange(false);
-    if (currentTheme === null) {
-      if (
+    if (!currentTheme) {
+      const prefersDark =
         window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      ) {
-        setCurrentTheme("dark");
-      } else {
-        setCurrentTheme("light");
-      }
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setCurrentTheme(prefersDark ? "dark" : "light");
     }
-    // 👆 false parameter is required for react project
   }, []);
 
-  // Opening right sidebar for notification
   const openNotification = () => {
     dispatch(
       openRightDrawer({
@@ -43,17 +58,22 @@ function Header() {
     );
   };
 
-  function logoutUser() {
+  const logoutUser = () => {
     localStorage.clear();
-    Navigate("/login");
-  }
+    navigate("/login");
+  };
+
+  // Generate initials avatar
+  const avatar =
+    profile?.fullname
+      ?.split(" ")
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "";
 
   return (
-    // navbar fixed  flex-none justify-between bg-base-300  z-10 shadow-md
-
     <>
-      <div className="navbar sticky top-0 bg-base-100  z-10 shadow-md ">
-        {/* Menu toogle for mobile view or small screen */}
+      <div className="navbar sticky top-0 bg-base-100 z-10 shadow-md">
         <div className="flex-1">
           <label
             htmlFor="left-sidebar-drawer"
@@ -64,24 +84,12 @@ function Header() {
           <h1 className="text-2xl font-semibold ml-2">{pageTitle}</h1>
         </div>
 
-        <div className="flex-none ">
-          {/* Multiple theme selection, uncomment this if you want to enable multiple themes selection, 
-                also includes corporate and retro themes in tailwind.config file */}
-
-          {/* <select className="select select-sm mr-4" data-choose-theme>
-                    <option disabled selected>Theme</option>
-                    <option value="light">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="corporate">Corporate</option>
-                    <option value="retro">Retro</option>
-                </select> */}
-
-          {/* Light and dark theme selection toogle **/}
-          <label className="swap ">
+        <div className="flex-none">
+          {/* THEME TOGGLE */}
+          <label className="swap">
             <input type="checkbox" />
             <SunIcon
               data-set-theme="light"
-              data-act-class="ACTIVECLASS"
               className={
                 "fill-current w-6 h-6 " +
                 (currentTheme === "dark" ? "swap-on" : "swap-off")
@@ -89,7 +97,6 @@ function Header() {
             />
             <MoonIcon
               data-set-theme="dark"
-              data-act-class="ACTIVECLASS"
               className={
                 "fill-current w-6 h-6 " +
                 (currentTheme === "light" ? "swap-on" : "swap-off")
@@ -97,42 +104,41 @@ function Header() {
             />
           </label>
 
-          {/* Notification icon */}
+          {/* Notification */}
           <button
-            className="btn btn-ghost ml-4  btn-circle"
-            onClick={() => openNotification()}
+            className="btn btn-ghost ml-4 btn-circle"
+            onClick={openNotification}
           >
             <div className="indicator">
               <BellIcon className="h-6 w-6" />
-              {noOfNotifications > 0 ? (
+              {noOfNotifications > 0 && (
                 <span className="indicator-item badge badge-secondary badge-sm">
                   {noOfNotifications}
                 </span>
-              ) : null}
+              )}
             </div>
           </button>
 
-          {/* Profile icon, opening menu on click */}
+          {/* Profile Image / Initials */}
           <div className="dropdown dropdown-end ml-4">
             <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-              <div className="w-10 rounded-full">
-                <img src="https://placeimg.com/80/80/people" alt="profile" />
+              <div className="w-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center overflow-hidden">
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="profile" />
+                ) : (
+                  <span className="text-lg font-semibold">{avatar}</span>
+                )}
               </div>
             </label>
+
             <ul
               tabIndex={0}
               className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
             >
-              <li className="justify-between">
-                <Link to={"/app/settings-profile"}>
-                  Profile Settings
-                  <span className="badge">New</span>
-                </Link>
+              <li>
+                <Link to="/app/settings-profile">My Profile</Link>
               </li>
-              <li className="">
-                <Link to={"/app/settings-billing"}>Bill History</Link>
-              </li>
-              <div className="divider mt-0 mb-0"></div>
+              <div className="divider my-0"></div>
               <li>
                 <a onClick={logoutUser}>Logout</a>
               </li>
