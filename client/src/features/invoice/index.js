@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import TitleCard from "../../components/Cards/TitleCard";
+import Pagination from "../../components/Pagination";
 
 export default function InvoiceDashboard() {
   const axiosInstance = axios.create({
@@ -17,6 +19,14 @@ export default function InvoiceDashboard() {
   const [formOpen, setFormOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalItems: 0,
+    itemsPerPage: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const [formData, setFormData] = useState({
     clientName: "",
@@ -29,13 +39,36 @@ export default function InvoiceDashboard() {
   const GST_RATE = 18;
 
   // === Fetch Invoices ===
-  const fetchInvoices = async (query = "") => {
+  const fetchInvoices = async (page = 1, limit = 10, query = "") => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get(
-        `/invoices${query ? `?search=${query}` : ""}`
-      );
-      setInvoices(res.data);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      if (query) {
+        params.append("search", query);
+      }
+
+      const res = await axiosInstance.get(`/invoices?${params.toString()}`);
+
+      // Handle the new paginated response format
+      if (res.data && res.data.data) {
+        setInvoices(res.data.data);
+        setPagination(res.data.pagination);
+      } else {
+        // Fallback for backward compatibility
+        setInvoices(res.data || []);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: res.data?.length || 0,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false,
+        });
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to fetch invoices");
@@ -45,14 +78,19 @@ export default function InvoiceDashboard() {
   };
 
   useEffect(() => {
-    fetchInvoices();
+    fetchInvoices(1, pagination.itemsPerPage);
   }, []);
+
+  // === Page Change Handler ===
+  const handlePageChange = (newPage) => {
+    fetchInvoices(newPage, pagination.itemsPerPage, searchTerm);
+  };
 
   // === Search Handler ===
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    fetchInvoices(value);
+    fetchInvoices(1, pagination.itemsPerPage, value);
   };
 
   // === Item Handlers ===
@@ -110,7 +148,11 @@ export default function InvoiceDashboard() {
         address: "",
         items: [{ description: "", quantity: 1, rate: 0, price: 0 }],
       });
-      fetchInvoices();
+      fetchInvoices(
+        pagination.currentPage,
+        pagination.itemsPerPage,
+        searchTerm
+      );
     } catch (err) {
       alert(err.response?.data?.message || "Error creating invoice");
     } finally {
@@ -119,212 +161,233 @@ export default function InvoiceDashboard() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto mt-8 p-6 shadow-lg rounded-2xl">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">Invoices</h2>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search by invoice no or email"
-            value={searchTerm}
-            onChange={handleSearch}
-            className="border px-3 py-2 rounded-lg w-72"
-          />
-          <button
-            onClick={() => setFormOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Create Invoice
-          </button>
-        </div>
-      </div>
-
-      {/* === Invoice Table === */}
-      <div className="overflow-x-auto">
-        {loading ? (
-          <p className="text-center py-4">Loading invoices...</p>
-        ) : invoices.length === 0 ? (
-          <p className="text-center py-4 text-gray-600">No invoices found.</p>
-        ) : (
-          <table className="w-full border-collapse border text-left text-sm">
-            <thead>
-              <tr>
-                <th className="border p-2">Invoice No</th>
-                <th className="border p-2">Client</th>
-                <th className="border p-2">Email</th>
-                <th className="border p-2">Phone</th>
-                <th className="border p-2">Total</th>
-                <th className="border p-2">Created At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv._id}>
-                  <td className="border p-2 font-semibold">{inv.invoiceNo}</td>
-                  <td className="border p-2">{inv.clientName}</td>
-                  <td className="border p-2">{inv.email}</td>
-                  <td className="border p-2">{inv.phone}</td>
-                  <td className="border p-2">₹{inv.grandTotal?.toFixed(2)}</td>
-                  <td className="border p-2">
-                    {new Date(inv.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* === Popup Modal Form === */}
-      {formOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl p-6 relative">
+    <TitleCard title="Invoice Dashboard" topMargin="mt-2">
+      <div className="max-w-6xl mx-auto mt-8 p-6 shadow-lg rounded-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">Invoices</h2>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search by invoice no or email"
+              value={searchTerm}
+              onChange={handleSearch}
+              className="border px-3 py-2 rounded-lg w-72"
+            />
             <button
-              onClick={() => setFormOpen(false)}
-              className="absolute top-3 right-4 text-gray-500 text-2xl hover:text-gray-800"
+              onClick={() => setFormOpen(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
-              ×
+              Create Invoice
             </button>
-
-            <h3 className="text-xl font-semibold text-center mb-4">
-              Create New Invoice
-            </h3>
-
-            <form onSubmit={handleCreateInvoice} className="space-y-4">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Client Name"
-                  value={formData.clientName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, clientName: e.target.value })
-                  }
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  placeholder="Phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  placeholder="Address"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  className="border p-2 rounded w-full"
-                />
-              </div>
-
-              {/* Items */}
-              <div>
-                <h4 className="text-lg font-semibold mb-2">Items</h4>
-                {formData.items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-5 gap-2 items-center mb-2 border-b pb-2"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Description"
-                      value={item.description}
-                      onChange={(e) =>
-                        handleItemChange(index, "description", e.target.value)
-                      }
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleItemChange(index, "quantity", e.target.value)
-                      }
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Rate"
-                      value={item.rate}
-                      onChange={(e) =>
-                        handleItemChange(index, "rate", e.target.value)
-                      }
-                      className="border p-2 rounded"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Price"
-                      value={item.price}
-                      readOnly
-                      className="border p-2 rounded bg-gray-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="text-red-500 font-bold text-lg"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="text-blue-600 font-semibold mt-2"
-                >
-                  + Add Item
-                </button>
-              </div>
-
-              {/* Totals */}
-              <div className="flex justify-between items-center mt-4">
-                <p className="font-semibold">GST: 18%</p>
-                <div className="text-right">
-                  <p>Subtotal: ₹{calcSubtotal().toFixed(2)}</p>
-                  <p>Grand Total (incl. GST): ₹{calcGrandTotal().toFixed(2)}</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                >
-                  {creating ? "Saving..." : "Save Invoice"}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* === Invoice Table === */}
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="loading loading-spinner loading-md"></div>
+            </div>
+          ) : invoices.length === 0 ? (
+            <p className="text-center py-4 text-gray-600">
+              {searchTerm
+                ? "No invoices found matching your search"
+                : "No invoices found."}
+            </p>
+          ) : (
+            <>
+              <table className="w-full  text-left text-sm">
+                <thead>
+                  <tr className=" p-2">
+                    <th>Invoice No</th>
+                    <th>Client</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Total</th>
+                    <th>Created At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv) => (
+                    <tr key={inv._id}>
+                      <td className=" p-2 font-semibold">{inv.invoiceNo}</td>
+                      <td>{inv.clientName}</td>
+                      <td>{inv.email}</td>
+                      <td>{inv.phone}</td>
+                      <td>₹{inv.grandTotal?.toFixed(2)}</td>
+                      <td>{new Date(inv.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              {pagination.totalPages > 0 && (
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  itemsPerPage={pagination.itemsPerPage}
+                  totalItems={pagination.totalItems}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {/* === Popup Modal Form === */}
+        {formOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl p-6 relative">
+              <button
+                onClick={() => setFormOpen(false)}
+                className="absolute top-3 right-4 text-gray-500 text-2xl hover:text-gray-800"
+              >
+                ×
+              </button>
+
+              <h3 className="text-xl font-semibold text-center mb-4">
+                Create New Invoice
+              </h3>
+
+              <form onSubmit={handleCreateInvoice} className="space-y-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Client Name"
+                    value={formData.clientName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, clientName: e.target.value })
+                    }
+                    className="border p-2 rounded w-full"
+                    required
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="border p-2 rounded w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Phone"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    className="border p-2 rounded w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    className="border p-2 rounded w-full"
+                  />
+                </div>
+
+                {/* Items */}
+                <div>
+                  <h4 className="text-lg font-semibold mb-2">Items</h4>
+                  {formData.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-5 gap-2 items-center mb-2 border-b pb-2"
+                    >
+                      <input
+                        type="text"
+                        placeholder="Description"
+                        value={item.description}
+                        onChange={(e) =>
+                          handleItemChange(index, "description", e.target.value)
+                        }
+                        className="border p-2 rounded"
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleItemChange(index, "quantity", e.target.value)
+                        }
+                        className="border p-2 rounded"
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Rate"
+                        value={item.rate}
+                        onChange={(e) =>
+                          handleItemChange(index, "rate", e.target.value)
+                        }
+                        className="border p-2 rounded"
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        value={item.price}
+                        readOnly
+                        className="border p-2 rounded bg-gray-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        className="text-red-500 font-bold text-lg"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    className="text-blue-600 font-semibold mt-2"
+                  >
+                    + Add Item
+                  </button>
+                </div>
+
+                {/* Totals */}
+                <div className="flex justify-between items-center mt-4">
+                  <p className="font-semibold">GST: 18%</p>
+                  <div className="text-right">
+                    <p>Subtotal: ₹{calcSubtotal().toFixed(2)}</p>
+                    <p>
+                      Grand Total (incl. GST): ₹{calcGrandTotal().toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormOpen(false)}
+                    className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    className="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    {creating ? "Saving..." : "Save Invoice"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </TitleCard>
   );
 }

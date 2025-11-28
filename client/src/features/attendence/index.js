@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import TitleCard from "../../components/Cards/TitleCard";
+import Pagination from "../../components/Pagination";
 
 const API = axios.create({
   baseURL: "http://localhost:4000/api",
@@ -7,7 +9,9 @@ const API = axios.create({
 
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token) req.headers.Authorization = `Bearer ${token}`;
+  if (token && req.headers) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
   return req;
 });
 
@@ -20,6 +24,16 @@ const Attendance = () => {
   const [message, setMessage] = useState("");
   const [onBreak, setOnBreak] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState(null);
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalItems: 0,
+    itemsPerPage: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   // Filters (Admin)
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,21 +53,44 @@ const Attendance = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (page = 1, limit = 10) => {
     try {
       setLoading(true);
 
       let url = "";
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
       if (role === "Admin" || role === "Project Manager") {
-        url = `/attendance?month=${month}&year=${year}`;
-        if (searchDate) url += `&date=${searchDate}`;
-        if (searchTerm) url += `&search=${searchTerm}`;
+        params.append("month", month.toString());
+        params.append("year", year.toString());
+        if (searchDate) params.append("date", searchDate);
+        if (searchTerm) params.append("search", searchTerm);
+        url = `/attendance?${params.toString()}`;
       } else {
-        url = `/attendance/my`;
+        url = `/attendance/my?page=${page}&limit=${limit}`;
       }
 
       const res = await API.get(url);
-      setAttendance(res.data);
+
+      // Handle the new paginated response format
+      if (res.data && res.data.data) {
+        setAttendance(res.data.data);
+        setPagination(res.data.pagination);
+      } else {
+        // Fallback for backward compatibility
+        setAttendance(res.data || []);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: res.data?.length || 0,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false,
+        });
+      }
     } catch (err) {
       console.error(err);
       setMessage(err.response?.data?.message || "Failed to fetch attendance");
@@ -62,11 +99,15 @@ const Attendance = () => {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    fetchAttendance(newPage, pagination.itemsPerPage);
+  };
+
   const handlePunchIn = async () => {
     try {
       const res = await API.post("/attendance/punch-in");
       setMessage(res.data.message);
-      fetchAttendance();
+      fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
     } catch (err) {
       setMessage(err.response?.data?.message || "Punch-in failed");
     }
@@ -76,7 +117,7 @@ const Attendance = () => {
     try {
       const res = await API.post("/attendance/punch-out");
       setMessage(res.data.message);
-      fetchAttendance();
+      fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
     } catch (err) {
       setMessage(err.response?.data?.message || "Punch-out failed");
     }
@@ -103,7 +144,7 @@ const Attendance = () => {
         setOnBreak(false);
         setBreakStartTime(null);
         setMessage(res.data.message);
-        fetchAttendance();
+        fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
       }
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to record break");
@@ -117,230 +158,248 @@ const Attendance = () => {
     setShowModal(true);
   };
 
+  // Refresh data when filters change
   useEffect(() => {
-    fetchAttendance();
+    fetchAttendance(1, pagination.itemsPerPage);
   }, [month, year, searchTerm, searchDate]);
 
+  // Initial load
+  useEffect(() => {
+    fetchAttendance(1, pagination.itemsPerPage);
+  }, []);
+
   return (
-    <div className="p-6 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-center">
-        Attendance Dashboard
-      </h2>
+    <div className="p-6">
+      <TitleCard title="Attendance Dashboard" topMargin="mt-2">
+        {/*  Filters for Admin/PM */}
+        {(role === "Admin" || role === "Project Manager") && (
+          <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+            <input
+              type="text"
+              placeholder="Search by Name or Email"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border rounded-lg px-3 py-2 w-1/3"
+            />
+            <input
+              type="date"
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              className="border rounded-lg px-3 py-2"
+            />
+            <select
+              value={month}
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="border rounded-lg px-3 py-2"
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {new Date(0, i).toLocaleString("default", { month: "long" })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="border rounded-lg px-3 py-2"
+            >
+              {[2023, 2024, 2025, 2026].map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => fetchAttendance(1, pagination.itemsPerPage)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Search
+            </button>
+          </div>
+        )}
 
-      {/*  Filters for Admin/PM */}
-      {(role === "Admin" || role === "Project Manager") && (
-        <div className=" shadow rounded-lg p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
-          <input
-            type="text"
-            placeholder="Search by Name or Email"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-lg px-3 py-2 w-1/3"
-          />
-          <input
-            type="date"
-            value={searchDate}
-            onChange={(e) => setSearchDate(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          />
-          <select
-            value={month}
-            onChange={(e) => setMonth(parseInt(e.target.value))}
-            className="border rounded-lg px-3 py-2"
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {new Date(0, i).toLocaleString("default", { month: "long" })}
-              </option>
-            ))}
-          </select>
-          <select
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="border rounded-lg px-3 py-2"
-          >
-            {[2023, 2024, 2025, 2026].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={fetchAttendance}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Search
-          </button>
-        </div>
-      )}
+        {/* Punch Buttons */}
+        {role !== "Admin" && role !== "Project Manager" && (
+          <div className="flex justify-center gap-4 mb-6">
+            <button
+              onClick={handlePunchIn}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+            >
+              Punch In
+            </button>
+            <button
+              onClick={handlePunchOut}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+            >
+              Punch Out
+            </button>
+            <button
+              onClick={handleBreakToggle}
+              className={`${
+                onBreak ? "bg-yellow-700" : "bg-yellow-500 hover:bg-yellow-600"
+              } text-white px-4 py-2 rounded-lg`}
+            >
+              {onBreak ? "End Break" : "Start Break"}
+            </button>
+          </div>
+        )}
 
-      {/* Punch Buttons */}
-      {role !== "Admin" && role !== "Project Manager" && (
-        <div className="flex justify-center gap-4 mb-6">
-          <button
-            onClick={handlePunchIn}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-          >
-            Punch In
-          </button>
-          <button
-            onClick={handlePunchOut}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
-          >
-            Punch Out
-          </button>
-          <button
-            onClick={handleBreakToggle}
-            className={`${
-              onBreak ? "bg-yellow-700" : "bg-yellow-500 hover:bg-yellow-600"
-            } text-white px-4 py-2 rounded-lg`}
-          >
-            {onBreak ? "End Break" : "Start Break"}
-          </button>
-        </div>
-      )}
+        {/* Message */}
+        {message && (
+          <p className="text-center text-blue-600 mb-4 font-medium">
+            {message}
+          </p>
+        )}
 
-      {/* Message */}
-      {message && (
-        <p className="text-center text-blue-600 mb-4 font-medium">{message}</p>
-      )}
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-4">
+            <div className="loading loading-spinner loading-md"></div>
+          </div>
+        )}
 
-      {/* Attendance Table */}
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full  shadow rounded-lg">
-          <thead className=" text-gray-700">
-            <tr>
-              {(role === "Admin" || role === "Project Manager") && (
-                <>
-                  <th className="px-4 py-2">Employee</th>
-                  <th className="px-4 py-2">Email</th>
-                </>
-              )}
-              <th className="px-4 py-2">Date</th>
-              <th className="px-4 py-2">Punch In</th>
-              <th className="px-4 py-2">Punch Out</th>
-              <th className="px-4 py-2">Duration</th>
-              <th className="px-4 py-2">Break Info</th>
-              <th className="px-4 py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendance.length > 0 ? (
-              attendance.map((att, i) => (
-                <tr key={i} className="text-center border-b">
-                  {(role === "Admin" || role === "Project Manager") && (
-                    <>
-                      <td className="px-4 py-2">
-                        {att.employeeId?.fullname ||
-                          att.employeeId?.name ||
-                          "—"}
-                      </td>
-                      <td className="px-4 py-2">
-                        {att.employeeId?.email || "—"}
-                      </td>
-                    </>
-                  )}
-                  <td className="px-4 py-2">
-                    {new Date(att.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2">
-                    {att.punchIn
-                      ? new Date(att.punchIn).toLocaleTimeString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {att.punchOut
-                      ? new Date(att.punchOut).toLocaleTimeString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {getDuration(att.punchIn, att.punchOut)}
-                  </td>
-                  <td className="px-4 py-2">
-                    {att.breaks?.length > 0 ? (
-                      <button
-                        onClick={() => handleShowBreaks(att.breaks)}
-                        className="text-yellow-600 hover:text-yellow-800 font-semibold"
-                      >
-                        View Breaks
-                      </button>
-                    ) : (
-                      "—"
+        {/* Attendance Table */}
+        <div className="overflow-x-auto">
+          <table className="table-auto w-full">
+            <thead className=" text-gray-700">
+              <tr>
+                {(role === "Admin" || role === "Project Manager") && (
+                  <>
+                    <th className="px-4 py-2">Employee</th>
+                    <th className="px-4 py-2">Email</th>
+                  </>
+                )}
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Punch In</th>
+                <th className="px-4 py-2">Punch Out</th>
+                <th className="px-4 py-2">Duration</th>
+                <th className="px-4 py-2">Break Info</th>
+                <th className="px-4 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attendance.length > 0 ? (
+                attendance.map((att, i) => (
+                  <tr key={i} className="text-center ">
+                    {(role === "Admin" || role === "Project Manager") && (
+                      <>
+                        <td className="px-4 py-2">
+                          {att.employeeId?.fullname ||
+                            att.employeeId?.name ||
+                            "—"}
+                        </td>
+                        <td className="px-4 py-2">
+                          {att.employeeId?.email || "—"}
+                        </td>
+                      </>
                     )}
-                  </td>
+                    <td>{new Date(att.date).toLocaleDateString()}</td>
+                    <td>
+                      {att.punchIn
+                        ? new Date(att.punchIn).toLocaleTimeString()
+                        : "—"}
+                    </td>
+                    <td>
+                      {att.punchOut
+                        ? new Date(att.punchOut).toLocaleTimeString()
+                        : "—"}
+                    </td>
+                    <td>{getDuration(att.punchIn, att.punchOut)}</td>
+                    <td>
+                      {att.breaks?.length > 0 ? (
+                        <button
+                          onClick={() => handleShowBreaks(att.breaks)}
+                          className="text-yellow-600 hover:text-yellow-800 font-semibold "
+                        >
+                          View Breaks
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td
+                      className={`px-4 py-2 font-semibold ${
+                        att.attendanceDay === "Present"
+                          ? "text-green-600"
+                          : att.attendanceDay === "Leave"
+                          ? "text-blue-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {att.attendanceDay}
+                    </td>
+                  </tr>
+                ))
+              ) : !loading ? (
+                <tr>
                   <td
-                    className={`px-4 py-2 font-semibold ${
-                      att.attendanceDay === "Present"
-                        ? "text-green-600"
-                        : att.attendanceDay === "Leave"
-                        ? "text-blue-600"
-                        : "text-red-600"
-                    }`}
+                    colSpan={
+                      role === "Admin" || role === "Project Manager" ? 8 : 6
+                    }
+                    className="text-center py-6 text-gray-500"
                   >
-                    {att.attendanceDay}
+                    No attendance records found
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={
-                    role === "Admin" || role === "Project Manager" ? 8 : 6
-                  }
-                  className="text-center py-6 text-gray-500"
-                >
-                  No attendance records found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : null}
+            </tbody>
+          </table>
 
-      {/* Breaks Popup Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className=" p-6 rounded-2xl shadow-lg w-96">
-            <h3 className="text-xl font-semibold mb-4 text-center">
-              Break Details
-            </h3>
-            <div className="max-h-60 overflow-y-auto">
-              {selectedBreaks.map((br, i) => (
-                <div key={i} className="border-b py-2">
-                  <p>
-                    <strong>
-                      {new Date(br.start).toLocaleTimeString()} -{" "}
-                      {new Date(br.end).toLocaleTimeString()}
-                    </strong>
-                  </p>
-                  <p>Duration: {br.durationMinutes} min</p>
-                </div>
-              ))}
-            </div>
+          {/* Pagination */}
+          {pagination.totalPages > 0 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              itemsPerPage={pagination.itemsPerPage}
+              totalItems={pagination.totalItems}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </div>
 
-            {/*  Show total + extended info */}
-            <div className="mt-4 text-center">
-              <p className="font-semibold">
-                Total Break Time: {selectedTotalBreak} min
-              </p>
-              {selectedTotalBreak > 60 && (
-                <p className="text-red-600 font-semibold">
-                  Extended by {selectedTotalBreak - 60} min
+        {/* Breaks Popup Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-2xl shadow-lg w-96">
+              <h3 className="text-xl font-semibold mb-4 text-center">
+                Break Details
+              </h3>
+              <div className="max-h-60 overflow-y-auto">
+                {selectedBreaks.map((br, i) => (
+                  <div key={i} className=" py-2">
+                    <p>
+                      <strong>
+                        {new Date(br.start).toLocaleTimeString()} -{" "}
+                        {new Date(br.end).toLocaleTimeString()}
+                      </strong>
+                    </p>
+                    <p>Duration: {br.durationMinutes} min</p>
+                  </div>
+                ))}
+              </div>
+              {/* Show total + extended info */}
+              <div className="mt-4 text-center">
+                <p className="font-semibold">
+                  Total Break Time: {selectedTotalBreak} min
                 </p>
-              )}
-            </div>
-
-            <div className="mt-4 flex justify-center">
-              <button
-                onClick={() => setShowModal(false)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-              >
-                Close
-              </button>
+                {selectedTotalBreak > 60 && (
+                  <p className="text-red-600 font-semibold">
+                    Extended by {selectedTotalBreak - 60} min
+                  </p>
+                )}
+              </div>
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </TitleCard>
     </div>
   );
 };

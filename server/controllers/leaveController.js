@@ -1,6 +1,7 @@
 import Leave from "../models/Leave.js";
 import Employee from "../models/Employee.js";
 import Attendance from "../models/Attendence.js";
+
 // Apply for leave (Employee)
 export const applyLeave = async (req, res) => {
   try {
@@ -40,17 +41,14 @@ export const applyLeave = async (req, res) => {
   }
 };
 
-//Get all leaves (Admin / PM)
+//Get all leaves with pagination (Admin / PM)
 export const getAllLeaves = async (req, res) => {
   try {
     const { role, email } = req.user;
-    let leaves = [];
+    let query = {};
 
     if (role === "Admin") {
-      leaves = await Leave.find().populate(
-        "employee",
-        "employee_id fullname email available_PL role"
-      );
+      // Admin can see all leaves - no additional query needed
     } else if (role === "Project Manager") {
       const manager = await Employee.findOne({ email });
       if (!manager)
@@ -61,20 +59,52 @@ export const getAllLeaves = async (req, res) => {
       }).select("_id");
 
       const teamIds = team.map((t) => t._id);
-
-      leaves = await Leave.find({ employee: { $in: teamIds } }).populate(
-        "employee",
-        "employee_id fullname email available_PL role"
-      );
+      query.employee = { $in: teamIds };
     }
 
-    res.status(200).json(leaves);
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const total = await Leave.countDocuments(query);
+
+    // Fetch data with pagination
+    let leaves = [];
+    if (role === "Admin") {
+      leaves = await Leave.find(query)
+        .populate("employee", "employee_id fullname email available_PL role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+    } else if (role === "Project Manager") {
+      leaves = await Leave.find(query)
+        .populate("employee", "employee_id fullname email available_PL role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+    }
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      data: leaves,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// View own leaves (Employee)
+// View own leaves with pagination (Employee)
 export const getMyLeaves = async (req, res) => {
   try {
     const employeeId = req.user.employeeId;
@@ -85,11 +115,35 @@ export const getMyLeaves = async (req, res) => {
     if (!employee)
       return res.status(404).json({ message: "Employee not found" });
 
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const total = await Leave.countDocuments({ employee: employeeId });
+
     const leaves = await Leave.find({ employee: employeeId })
       .populate("employee", "employee_id fullname email role available_PL")
-      .populate("approvedBy", "name role");
+      .populate("approvedBy", "name role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.json({ employee, leaves });
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      employee,
+      data: leaves,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

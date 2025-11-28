@@ -1,17 +1,44 @@
-import routes from "../routes/sidebar";
+import getRoutes from "../routes/sidebar";
 import { NavLink, Routes, Link, useLocation } from "react-router-dom";
 import SidebarSubmenu from "./SidebarSubmenu";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import { useDispatch } from "react-redux";
+import { useState, useEffect } from "react";
 
 function LeftSidebar() {
   const location = useLocation();
+  const [routes, setRoutes] = useState([]);
+  const [roleVersion, setRoleVersion] = useState(0);
 
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Update routes whenever component mounts
+    setRoutes(getRoutes());
+  }, []);
 
   const close = (e) => {
     document.getElementById("left-sidebar-drawer").click();
   };
+
+  // Re-fetch routes when location changes (user navigates)
+  useEffect(() => {
+    setRoutes(getRoutes());
+  }, [location]);
+
+  // Listen for role changes in localStorage
+  useEffect(() => {
+    const checkRoleChange = () => {
+      const currentRole = localStorage.getItem("role");
+      setRoleVersion((prev) => prev + 1);
+      setRoutes(getRoutes());
+    };
+
+    // Check for role changes periodically
+    const interval = setInterval(checkRoleChange, 500);
+
+    return () => clearInterval(interval);
+  }, [roleVersion]);
 
   return (
     <div className="drawer-side  z-30  ">
@@ -34,33 +61,35 @@ function LeftSidebar() {
             Logixo
           </Link>{" "}
         </li>
-        {routes.map((route, k) => {
-          return (
-            <li className="" key={k}>
-              {route.submenu ? (
-                <SidebarSubmenu {...route} />
-              ) : (
-                <NavLink
-                  end
-                  to={route.path}
-                  className={({ isActive }) =>
-                    `${
-                      isActive ? "font-semibold  bg-base-200 " : "font-normal"
-                    }`
-                  }
-                >
-                  {route.icon} {route.name}
-                  {location.pathname === route.path ? (
-                    <span
-                      className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary "
-                      aria-hidden="true"
-                    ></span>
-                  ) : null}
-                </NavLink>
-              )}
-            </li>
-          );
-        })}
+        {routes &&
+          routes.length > 0 &&
+          routes.map((route, k) => {
+            return (
+              <li className="" key={k}>
+                {route.submenu ? (
+                  <SidebarSubmenu {...route} />
+                ) : (
+                  <NavLink
+                    end
+                    to={route.path}
+                    className={({ isActive }) =>
+                      `${
+                        isActive ? "font-semibold  bg-base-200 " : "font-normal"
+                      }`
+                    }
+                  >
+                    {route.icon} {route.name}
+                    {location.pathname === route.path ? (
+                      <span
+                        className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary "
+                        aria-hidden="true"
+                      ></span>
+                    ) : null}
+                  </NavLink>
+                )}
+              </li>
+            );
+          })}
       </ul>
     </div>
   );

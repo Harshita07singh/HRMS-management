@@ -41,7 +41,7 @@ const Register = () => {
           <div className="py-24 px-10">
             <form
               onSubmit={handleSubmit}
-              className="bg-white shadow-lg rounded-xl p-6 w-80"
+              className=" shadow-lg rounded-xl p-6 w-full max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold mb-4 text-center">Register</h2>
 
@@ -94,7 +94,7 @@ const Register = () => {
               <p className="mt-3 text-center text-sm">
                 Already have an account?{" "}
                 <span
-                  className="text-blue-600 cursor-pointer"
+                  className="text-blue-400 cursor-pointer"
                   onClick={() => navigate("/login")}
                 >
                   Login

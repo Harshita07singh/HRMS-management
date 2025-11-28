@@ -2,8 +2,9 @@ import moment from "moment";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import TitleCard from "../../components/Cards/TitleCard";
+import Pagination from "../../components/Pagination";
 import { openModal } from "../common/modalSlice";
-import { deleteLead, getLeadsContent } from "./leadSlice";
+import { deleteLeadFromServer, getLeadsContent } from "./leadSlice";
 import {
   CONFIRMATION_MODAL_CLOSE_TYPES,
   MODAL_BODY_TYPES,
@@ -40,13 +41,19 @@ const TopSideButtons = () => {
 };
 
 function Leads() {
-  const { leads } = useSelector((state) => state.lead);
+  const { leads, pagination, isLoading } = useSelector((state) => state.lead);
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    dispatch(getLeadsContent());
+    dispatch(getLeadsContent({ page: 1, limit: 10 }));
   }, []);
+
+  const handlePageChange = (newPage) => {
+    dispatch(
+      getLeadsContent({ page: newPage, limit: pagination.itemsPerPage })
+    );
+  };
 
   const getDummyStatus = (index) => {
     if (index % 5 === 0) return <div className="badge">Not Interested</div>;
@@ -68,11 +75,21 @@ function Leads() {
           message: `Are you sure you want to delete this lead?`,
           type: CONFIRMATION_MODAL_CLOSE_TYPES.LEAD_DELETE,
           index,
-          _id: lead._id, // <-- IMPORTANT FIX
+          _id: lead._id,
         },
       })
     );
   };
+
+  // Filter leads based on search query
+  const filteredLeads = leads.filter((l) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      l.employee_id?.toLowerCase().includes(query) ||
+      l.fullname?.toLowerCase().includes(query) ||
+      l.email?.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <>
@@ -81,17 +98,24 @@ function Leads() {
         topMargin="mt-2"
         TopSideButtons={<TopSideButtons />}
       >
-        {/* Leads List in table format loaded from slice after api call */}
-        <div className="overflow-x-auto w-full">
-          <div className="mb-4 flex justify-end">
+        {/* Search and Loading */}
+        <div className="mb-4 flex justify-between items-center">
+          <div className="flex-1 max-w-xs">
             <input
               type="text"
               placeholder="Search by Employee ID, Name, or Email"
-              className="input input-bordered w-full max-w-xs"
+              className="input input-bordered w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {isLoading && (
+            <div className="loading loading-spinner loading-sm"></div>
+          )}
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto w-full">
           <table className="table w-full">
             <thead>
               <tr>
@@ -109,19 +133,26 @@ function Leads() {
                 <th>Employment Type</th>
                 <th>Status</th>
                 <th>Documents</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {leads
-                .filter((l) => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    l.employee_id?.toLowerCase().includes(query) ||
-                    l.fullname?.toLowerCase().includes(query) ||
-                    l.email?.toLowerCase().includes(query)
-                  );
-                })
-                .map((l, k) => (
+              {filteredLeads.length === 0 ? (
+                <tr>
+                  <td colSpan="15" className="text-center py-8">
+                    {isLoading ? (
+                      <div className="loading loading-spinner loading-md"></div>
+                    ) : (
+                      <div className="text-gray-500">
+                        {searchQuery
+                          ? "No leads found matching your search"
+                          : "No leads found"}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                filteredLeads.map((l, k) => (
                   <tr key={k}>
                     <td>{l.employee_id}</td>
                     <td>{l.fullname}</td>
@@ -148,10 +179,22 @@ function Leads() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pagination.totalPages > 0 && (
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            itemsPerPage={pagination.itemsPerPage}
+            totalItems={pagination.totalItems}
+            onPageChange={handlePageChange}
+          />
+        )}
       </TitleCard>
     </>
   );

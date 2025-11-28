@@ -1,5 +1,5 @@
 import { themeChange } from "theme-change";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import BellIcon from "@heroicons/react/24/outline/BellIcon";
 import Bars3Icon from "@heroicons/react/24/outline/Bars3Icon";
@@ -18,6 +18,7 @@ function Header() {
     localStorage.getItem("theme")
   );
   const [profile, setProfile] = useState(null);
+  const prevRoleRef = useRef(localStorage.getItem("role"));
 
   // Fetch logged-in employee profile
   const getProfile = async () => {
@@ -37,6 +38,20 @@ function Header() {
 
   useEffect(() => {
     getProfile();
+  }, []);
+
+  // Listen for role changes and refresh profile
+  useEffect(() => {
+    const checkRoleChange = () => {
+      const currentRole = localStorage.getItem("role");
+      if (currentRole && currentRole !== prevRoleRef.current) {
+        prevRoleRef.current = currentRole;
+        getProfile();
+      }
+    };
+
+    const interval = setInterval(checkRoleChange, 500);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

@@ -1,45 +1,97 @@
-import { useState } from 'react'
-import CalendarView from '../../components/CalendarView'
-import moment from 'moment'
-import { CALENDAR_INITIAL_EVENTS } from '../../utils/dummyData'
-import { useDispatch } from 'react-redux'
-import { openRightDrawer } from '../common/rightDrawerSlice'
-import { RIGHT_DRAWER_TYPES } from '../../utils/globalConstantUtil'
-import { showNotification } from '../common/headerSlice'
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import CalendarView from "../../components/CalendarView";
+import moment from "moment";
+import { useDispatch } from "react-redux";
+import { openRightDrawer } from "../common/rightDrawerSlice";
+import { RIGHT_DRAWER_TYPES } from "../../utils/globalConstantUtil";
+import { showNotification } from "../common/headerSlice";
 
+const API = axios.create({ baseURL: "http://localhost:4000/api" });
+API.interceptors.request.use((req) => {
+  const token = localStorage.getItem("token");
+  if (token) req.headers.Authorization = `Bearer ${token}`;
+  return req;
+});
 
+function Calendar() {
+  const dispatch = useDispatch();
+  const [events, setEvents] = useState([]);
 
-const INITIAL_EVENTS = CALENDAR_INITIAL_EVENTS
+  useEffect(() => {
+    fetchCalendarData();
+  }, []);
 
-function Calendar(){
+  const fetchCalendarData = async (
+    month = new Date().getMonth() + 1,
+    year = new Date().getFullYear()
+  ) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      let attendanceRes, leavesRes;
 
-    const dispatch = useDispatch()
+      if (user.role === "Admin") {
+        attendanceRes = await API.get(
+          `/attendance?month=${month}&year=${year}&limit=1000`
+        );
+        leavesRes = await API.get(
+          `/leaves?month=${month}&year=${year}&limit=1000`
+        );
+      } else {
+        attendanceRes = await API.get(
+          `/attendance/my?month=${month}&year=${year}&limit=100`
+        );
+        leavesRes = await API.get(
+          `/leaves/my-leaves?month=${month}&year=${year}&limit=100`
+        );
+      }
 
-    const [events, setEvents] = useState(INITIAL_EVENTS)
+      const calendarEvents = [];
 
-    // Add your own Add Event handler, like opening modal or random event addition
-    // Format - {title :"", theme: "", startTime : "", endTime : ""}, typescript version comming soon :)
-    const addNewEvent = (date) => {
-        let randomEvent = INITIAL_EVENTS[Math.floor(Math.random() * 10)]
-        let newEventObj = {title : randomEvent.title, theme : randomEvent.theme, startTime : moment(date).startOf('day'), endTime : moment(date).endOf('day')}
-        setEvents([...events, newEventObj])
-        dispatch(showNotification({message : "New Event Added!", status : 1}))
+      // ⭐ Attendance
+      const attendanceData = attendanceRes.data.data || attendanceRes.data;
+      attendanceData.forEach((att) => {
+        calendarEvents.push({
+          title: att.attendanceDay, // Present / Absent / WeekOff
+          theme: att.attendanceDay, // 👌 Theme now directly matches CALENDAR_EVENT_STYLE key
+          startTime: moment(att.date).startOf("day"),
+          endTime: moment(att.date).endOf("day"),
+        });
+      });
+
+      // ⭐ Leaves
+      const leavesData = leavesRes.data.data || leavesRes.data;
+      leavesData.forEach((lv) => {
+        if (lv.status === "Approved") {
+          calendarEvents.push({
+            title: `Leave (${lv.reason})`,
+            theme: "Leave", // 👌 Correct mapping
+            startTime: moment(lv.startDate),
+            endTime: moment(lv.endDate),
+          });
+        }
+      });
+
+      setEvents(calendarEvents);
+    } catch (error) {
+      console.error("Calendar API Error:", error);
+      dispatch(
+        showNotification({ message: "Failed to load calendar data", status: 0 })
+      );
     }
+  };
 
-    // Open all events of current day in sidebar 
-    const openDayDetail = ({filteredEvents, title}) => {
-        dispatch(openRightDrawer({header : title, bodyType : RIGHT_DRAWER_TYPES.CALENDAR_EVENTS, extraObject : {filteredEvents}}))
-    }
+  const openDayDetail = ({ filteredEvents, title }) => {
+    dispatch(
+      openRightDrawer({
+        header: `Details for ${title}`,
+        bodyType: RIGHT_DRAWER_TYPES.CALENDAR_EVENTS,
+        extraObject: { filteredEvents },
+      })
+    );
+  };
 
-    return(
-        <>
-           <CalendarView 
-                calendarEvents={events}
-                addNewEvent={addNewEvent}
-                openDayDetail={openDayDetail}
-           />
-        </>
-    )
+  return <CalendarView calendarEvents={events} openDayDetail={openDayDetail} />;
 }
 
-export default Calendar
+export default Calendar;

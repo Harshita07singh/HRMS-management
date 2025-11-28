@@ -150,8 +150,33 @@ export const getInvoices = async (req, res) => {
       };
     }
 
-    const invoices = await Invoice.find(query).sort({ createdAt: -1 });
-    res.json(invoices);
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const total = await Invoice.countDocuments(query);
+
+    // Fetch data with pagination
+    const invoices = await Invoice.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      data: invoices,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

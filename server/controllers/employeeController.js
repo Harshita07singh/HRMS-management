@@ -1,40 +1,65 @@
 import Employee from "../models/Employee.js";
-
 import User from "../models/User.js";
-//  Role-based Employee Fetch
+
+// Role-based Employee Fetch with Pagination
 export const getAllEmployees = async (req, res) => {
   try {
     const { role, email, name } = req.user;
 
-    let employees;
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    let total;
 
     if (role === "Admin") {
       // Admin → all employees
-      employees = await Employee.find();
+      total = await Employee.countDocuments();
+      query = {};
     } else if (role === "Project Manager") {
       // PM → self + employees reporting to them
-      employees = await Employee.find({
+      query = {
         $or: [
           { email: email }, // self
           { reportingmanager: name }, // employees under them
         ],
-      });
+      };
+      total = await Employee.countDocuments(query);
     } else if (role === "Employee") {
       // Employee → only their own profile
-      employees = await Employee.find({ email: req.user.email });
+      query = { email: req.user.email };
+      total = await Employee.countDocuments(query);
     } else {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    res.status(200).json(employees);
+    const employees = await Employee.find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      data: employees,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     console.error("Error fetching employees:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-//  Fetch Project Managers
-
+// Fetch Project Managers
 export const getProjectManagers = async (req, res) => {
   try {
     const managers = await Employee.find({ role: "Project Manager" });
@@ -45,8 +70,7 @@ export const getProjectManagers = async (req, res) => {
   }
 };
 
-// Create
-
+// Create Employee
 export const createEmployee = async (req, res) => {
   try {
     const employee = new Employee(req.body);
@@ -57,7 +81,7 @@ export const createEmployee = async (req, res) => {
   }
 };
 
-// Update
+// Update Employee
 export const updateEmployee = async (req, res) => {
   try {
     const updated = await Employee.findByIdAndUpdate(req.params.id, req.body, {
@@ -70,7 +94,7 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// Delete
+// Delete Employee
 export const deleteEmployee = async (req, res) => {
   try {
     const deleted = await Employee.findByIdAndDelete(req.params.id);
@@ -81,6 +105,7 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
+// Get My Profile
 export const getMyProfile = async (req, res) => {
   try {
     const userEmail = req.user.email;

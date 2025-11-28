@@ -116,20 +116,41 @@ export const getMyAttendance = async (req, res) => {
     if (!employeeId)
       return res.status(403).json({ message: "Not an employee account" });
 
+    // Pagination parameters for own attendance
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await Attendance.countDocuments({ employeeId });
+
     const records = await Attendance.find({ employeeId })
       .populate(
         "employeeId",
         "fullname email employee_id role department designation"
       )
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.json(records);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      data: records,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Admin / Manager / Team Lead - Get all attendance with filters
+// Admin / Manager / Team Lead - Get all attendance with filters and pagination
 export const getAllAttendance = async (req, res) => {
   try {
     const { month, year, date, search } = req.query;
@@ -169,12 +190,30 @@ export const getAllAttendance = async (req, res) => {
         employeeFilter.employeeId = { $in: matchedIds };
       } else {
         // No matching employees — return empty array early
-        return res.json([]);
+        return res.json({
+          data: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: 10,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        });
       }
     }
 
     // Combine filters
     const finalQuery = { ...query, ...employeeFilter };
+
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const total = await Attendance.countDocuments(finalQuery);
 
     // Fetch data with populated employee details
     const records = await Attendance.find(finalQuery)
@@ -182,9 +221,23 @@ export const getAllAttendance = async (req, res) => {
         "employeeId",
         "employee_id fullname email department designation role"
       )
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.json(records);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      data: records,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     console.error("Error fetching attendance:", err);
     res.status(500).json({ message: err.message });

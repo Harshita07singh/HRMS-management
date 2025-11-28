@@ -1,47 +1,69 @@
-import PageContent from "./PageContent"
-import LeftSidebar from "./LeftSidebar"
-import { useSelector, useDispatch } from 'react-redux'
-import RightSidebar from './RightSidebar'
-import { useEffect } from "react"
-import  {  removeNotificationMessage } from "../features/common/headerSlice"
-import {NotificationContainer, NotificationManager} from 'react-notifications';
-import 'react-notifications/lib/notifications.css';
-import ModalLayout from "./ModalLayout"
+import PageContent from "./PageContent";
+import LeftSidebar from "./LeftSidebar";
+import { useSelector, useDispatch } from "react-redux";
+import RightSidebar from "./RightSidebar";
+import { useEffect, useState } from "react";
+import { removeNotificationMessage } from "../features/common/headerSlice";
+import {
+  NotificationContainer,
+  NotificationManager,
+} from "react-notifications";
+import "react-notifications/lib/notifications.css";
+import ModalLayout from "./ModalLayout";
+import useAuthStateListener from "../hooks/useAuthStateListener";
 
-function Layout(){
-  const dispatch = useDispatch()
-  const {newNotificationMessage, newNotificationStatus} = useSelector(state => state.header)
+function Layout() {
+  const dispatch = useDispatch();
+  const { newNotificationMessage, newNotificationStatus } = useSelector(
+    (state) => state.header
+  );
+  const [, setStorageUpdate] = useState(0);
 
+  // Listen for auth state changes and refresh data
+  useAuthStateListener();
 
   useEffect(() => {
-      if(newNotificationMessage !== ""){
-          if(newNotificationStatus === 1)NotificationManager.success(newNotificationMessage, 'Success')
-          if(newNotificationStatus === 0)NotificationManager.error( newNotificationMessage, 'Error')
-          dispatch(removeNotificationMessage())
-      }
-  }, [newNotificationMessage])
+    if (newNotificationMessage !== "") {
+      if (newNotificationStatus === 1)
+        NotificationManager.success(newNotificationMessage, "Success");
+      if (newNotificationStatus === 0)
+        NotificationManager.error(newNotificationMessage, "Error");
+      dispatch(removeNotificationMessage());
+    }
+  }, [newNotificationMessage]);
 
-    return(
-      <>
-        { /* Left drawer - containing page content and side bar (always open) */ }
-        <div className="drawer  lg:drawer-open">
-            <input id="left-sidebar-drawer" type="checkbox" className="drawer-toggle" />
-            <PageContent/>
-            <LeftSidebar />
-        </div>
+  // Listen for storage changes (when user logs in with different role)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setStorageUpdate((prev) => prev + 1);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
-        { /* Right drawer - containing secondary content like notifications list etc.. */ }
-        <RightSidebar />
+  return (
+    <>
+      {/* Left drawer - containing page content and side bar (always open) */}
+      <div className="drawer  lg:drawer-open">
+        <input
+          id="left-sidebar-drawer"
+          type="checkbox"
+          className="drawer-toggle"
+        />
+        <PageContent />
+        <LeftSidebar />
+      </div>
 
+      {/* Right drawer - containing secondary content like notifications list etc.. */}
+      <RightSidebar />
 
-        {/** Notification layout container */}
-        <NotificationContainer />
+      {/** Notification layout container */}
+      <NotificationContainer />
 
       {/* Modal layout container */}
-        <ModalLayout />
-
-      </>
-    )
+      <ModalLayout />
+    </>
+  );
 }
 
-export default Layout
+export default Layout;

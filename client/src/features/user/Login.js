@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import LandingIntro from "./LandingIntro";
 import ErrorText from "../../components/Typography/ErrorText";
 import InputText from "../../components/Input/InputText";
+import axios from "axios";
 
 function Login() {
   const navigate = useNavigate();
@@ -35,17 +36,11 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("role", data.user.role);
 
-      // Role-based navigation
-      switch (data.user.role) {
-        case "Admin":
-          navigate("/admin/dashboard");
-          break;
-        case "Project Manager":
-          navigate("/manager/dashboard");
-          break;
-        default:
-          navigate("/employee/dashboard");
-      }
+      // Set axios default header for subsequent requests
+      axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+
+      // Navigate to dashboard
+      navigate("/app/dashboard");
     } catch (err) {
       setErrorMessage(err.message);
     } finally {
@@ -87,13 +82,13 @@ function Login() {
                 />
               </div>
 
-              <div className="text-right text-primary">
+              {/* <div className="text-right text-primary">
                 <Link to="/forgot-password">
                   <span className="text-sm hover:underline cursor-pointer">
                     Forgot Password?
                   </span>
                 </Link>
-              </div>
+              </div> */}
 
               <ErrorText styleClass="mt-8">{errorMessage}</ErrorText>
               <button
