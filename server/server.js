@@ -9,11 +9,21 @@ import leaveRoutes from "./routes/leaveRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import attendanceRoutes from "./routes/attendenceRoutes.js";
 import payrollRoutes from "./routes/payrollRoutes.js";
+import { loadModels } from "./utils/faceRecognition.js";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 connectDB();
+
+// Initialize face recognition models
+(async () => {
+  try {
+    await loadModels();
+  } catch (error) {
+    console.error("Failed to load face recognition models:", error);
+  }
+})();
 
 app.use(
   cors({

@@ -11,6 +11,10 @@ const employeeSchema = new mongoose.Schema({
   department: { type: String, required: true },
   designation: { type: String, required: true },
   reportingmanager: { type: String },
+  faceEmbedding: {
+    type: [Number], // 128-dimensional face vector
+    default: [],
+  },
 
   emplymenttype: {
     type: String,

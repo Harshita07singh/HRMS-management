@@ -1,6 +1,31 @@
 import Employee from "../models/Employee.js";
 import User from "../models/User.js";
+import { getFaceEmbedding } from "../utils/faceRecognition.js";
+import multer from "multer";
+const upload = multer({ dest: "uploads/" });
+export const registerEmployee = async (req, res) => {
+  try {
+    const { email } = req.body;
 
+    // Step 1: Extract embedding
+    const faceEmbedding = await getFaceEmbedding(req.file.path);
+    if (!faceEmbedding)
+      return res.status(400).json({ message: "Face not detected. Try again." });
+
+    // Step 2: Create employee
+    const employee = new Employee({
+      ...req.body,
+      faceEmbedding: Array.from(faceEmbedding),
+    });
+
+    await employee.save();
+    res
+      .status(201)
+      .json({ message: "Employee registered with facial data", employee });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 // Role-based Employee Fetch with Pagination
 export const getAllEmployees = async (req, res) => {
   try {

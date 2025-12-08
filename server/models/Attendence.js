@@ -21,6 +21,10 @@ const attendanceSchema = new mongoose.Schema(
     year: Number,
     punchIn: Date,
     punchOut: Date,
+    punchInVerified: { type: Boolean, default: false }, // Face verification status
+    punchOutVerified: { type: Boolean, default: false },
+    punchInSimilarityScore: { type: Number, default: 0 }, // Face match score 0-100
+    punchOutSimilarityScore: { type: Number, default: 0 },
     attendanceDay: {
       type: String,
       enum: [
@@ -34,7 +38,7 @@ const attendanceSchema = new mongoose.Schema(
       default: "Absent",
     },
     totalWorkMinutes: { type: Number, default: 0 },
-    breaks: [breakSchema], // 👈 Added
+    breaks: [breakSchema],
   },
   { timestamps: true }
 );

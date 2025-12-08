@@ -10,19 +10,22 @@ import {
   authMiddleware,
   authorizeRoles,
 } from "../middleware/authMiddleware.js";
-
+import multer from "multer";
+const upload = multer({ dest: "uploads/" });
 const router = express.Router();
 
 router.post(
   "/punch-in",
   authMiddleware,
   authorizeRoles("Employee", "Project Manager", "Team Lead"),
+  upload.single("image"),
   punchIn
 );
 router.post(
   "/punch-out",
   authMiddleware,
   authorizeRoles("Employee", "Project Manager", "Team Lead"),
+  upload.single("image"),
   punchOut
 );
 router.post(

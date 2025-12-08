@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import TitleCard from "../../components/Cards/TitleCard";
 import Pagination from "../../components/Pagination";
+import FaceCaptureModal from "../../components/FaceCapture/FaceCaptureModal";
 
 const API = axios.create({
   baseURL: "http://localhost:4000/api",
@@ -43,6 +44,14 @@ const Attendance = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedBreaks, setSelectedBreaks] = useState([]);
   const [selectedTotalBreak, setSelectedTotalBreak] = useState(0);
+  const [showFaceCapture, setShowFaceCapture] = useState(false);
+  const [currentAction, setCurrentAction] = useState(null); // 'punch-in' or 'punch-out'
+  const [selfieBlob, setSelfieBlob] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleFaceCapture = (blob) => {
+    setSelfieBlob(blob);
+  };
 
   const getDuration = (punchIn, punchOut) => {
     if (!punchIn || !punchOut) return "—";
@@ -103,23 +112,101 @@ const Attendance = () => {
     fetchAttendance(newPage, pagination.itemsPerPage);
   };
 
+  // const handlePunchIn = async () => {
+  //   try {
+  //     const res = await API.post("/attendance/punch-in");
+  //     setMessage(res.data.message);
+  //     fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
+  //   } catch (err) {
+  //     setMessage(err.response?.data?.message || "Punch-in failed");
+  //   }
+  // };
+
   const handlePunchIn = async () => {
+    if (!selfieBlob) {
+      setMessage("Please capture a selfie before Punch-In.");
+      return;
+    }
+
     try {
-      const res = await API.post("/attendance/punch-in");
+      setIsProcessing(true);
+      const form = new FormData();
+      form.append("image", selfieBlob);
+
+      const res = await API.post("/attendance/punch-in", form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       setMessage(res.data.message);
-      fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
+      setSelfieBlob(null);
+      setShowFaceCapture(false);
+      setCurrentAction(null);
+      setTimeout(() => {
+        fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
+      }, 500);
     } catch (err) {
       setMessage(err.response?.data?.message || "Punch-in failed");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handlePunchOut = async () => {
+    if (!selfieBlob) {
+      setMessage("Please capture a selfie before Punch-Out.");
+      return;
+    }
+
     try {
-      const res = await API.post("/attendance/punch-out");
+      setIsProcessing(true);
+      const form = new FormData();
+      form.append("image", selfieBlob);
+
+      const res = await API.post("/attendance/punch-out", form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       setMessage(res.data.message);
-      fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
+      setSelfieBlob(null);
+      setShowFaceCapture(false);
+      setCurrentAction(null);
+      setTimeout(() => {
+        fetchAttendance(pagination.currentPage, pagination.itemsPerPage);
+      }, 500);
     } catch (err) {
       setMessage(err.response?.data?.message || "Punch-out failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const openPunchInCamera = () => {
+    setCurrentAction("punch-in");
+    setShowFaceCapture(true);
+    setSelfieBlob(null);
+  };
+
+  const openPunchOutCamera = () => {
+    setCurrentAction("punch-out");
+    setShowFaceCapture(true);
+    setSelfieBlob(null);
+  };
+
+  const handleFaceCaptureClose = () => {
+    setShowFaceCapture(false);
+    setCurrentAction(null);
+    setSelfieBlob(null);
+  };
+
+  const handleFaceCaptureSubmit = () => {
+    if (currentAction === "punch-in") {
+      handlePunchIn();
+    } else if (currentAction === "punch-out") {
+      handlePunchOut();
     }
   };
 
@@ -220,26 +307,42 @@ const Attendance = () => {
 
         {/* Punch Buttons */}
         {role !== "Admin" && role !== "Project Manager" && (
-          <div className="flex justify-center gap-4 mb-6">
+          <div className="flex justify-center gap-4 mb-6 flex-wrap">
             <button
-              onClick={handlePunchIn}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+              onClick={openPunchInCamera}
+              disabled={isProcessing}
+              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
             >
-              Punch In
+              {isProcessing ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Processing...
+                </>
+              ) : (
+                <> Punch In (Face)</>
+              )}
             </button>
             <button
-              onClick={handlePunchOut}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+              onClick={openPunchOutCamera}
+              disabled={isProcessing}
+              className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all"
             >
-              Punch Out
+              {isProcessing ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Processing...
+                </>
+              ) : (
+                <> Punch Out (Face)</>
+              )}
             </button>
             <button
               onClick={handleBreakToggle}
               className={`${
                 onBreak ? "bg-yellow-700" : "bg-yellow-500 hover:bg-yellow-600"
-              } text-white px-4 py-2 rounded-lg`}
+              } text-white px-6 py-3 rounded-lg font-semibold transition-all`}
             >
-              {onBreak ? "End Break" : "Start Break"}
+              {onBreak ? "⏸️ End Break" : " Start Break"}
             </button>
           </div>
         )}
@@ -356,6 +459,38 @@ const Attendance = () => {
             />
           )}
         </div>
+        {/* Face Capture Modal */}
+        <FaceCaptureModal
+          isOpen={showFaceCapture}
+          onCapture={handleFaceCapture}
+          onClose={handleFaceCaptureClose}
+          title={
+            currentAction === "punch-in"
+              ? "Punch In - Face Verification"
+              : "Punch Out - Face Verification"
+          }
+          subtitle="Look directly at the camera for verification"
+        />
+
+        {/* Submit Button for Face Capture */}
+        {selfieBlob && showFaceCapture && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+            <button
+              onClick={handleFaceCaptureSubmit}
+              disabled={isProcessing}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Verifying...
+                </>
+              ) : (
+                <>✓ Confirm & Submit</>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Breaks Popup Modal */}
         {showModal && (

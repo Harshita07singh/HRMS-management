@@ -1,68 +1,220 @@
 import Attendance from "../models/Attendence.js";
 import Employee from "../models/Employee.js";
+import {
+  getFaceEmbedding,
+  compareFaces,
+  getFaceSimilarityScore,
+} from "../utils/faceRecognition.js";
 
+// Punch In with face recognition
 export const punchIn = async (req, res) => {
   try {
-    const employeeId = req.user.employeeId;
-    if (!employeeId)
-      return res.status(403).json({ message: "Not an employee account" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
 
-    const employee = await Employee.findById(employeeId);
-    if (!employee)
+    const userId = req.user.id || req.user._id;
+    const employee = await Employee.findOne({ user: userId });
+
+    if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
+    }
 
+    // Check if already punched in today
     const today = new Date();
-    const date = new Date(
+    const startOfDay = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate()
     );
+    const endOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 1
+    );
 
-    const existing = await Attendance.findOne({ employeeId, date });
-    if (existing)
-      return res.status(400).json({ message: "Already punched in today" });
-
-    const attendance = await Attendance.create({
-      employeeId,
-      employee_id: employee.employee_id,
-      date,
-      month: today.getMonth() + 1,
-      year: today.getFullYear(),
-      punchIn: today,
-      attendanceDay: "Present",
+    const existingAttendance = await Attendance.findOne({
+      employeeId: employee._id,
+      date: { $gte: startOfDay, $lt: endOfDay },
     });
 
-    res.status(201).json({ message: "Punched in successfully", attendance });
+    if (existingAttendance && existingAttendance.punchIn) {
+      return res.status(400).json({ message: "Already punched in today" });
+    }
+
+    // Extract face embedding from uploaded image
+    const currentEmbedding = await getFaceEmbedding(req.file.path);
+    if (!currentEmbedding) {
+      return res.status(400).json({
+        message: "No face detected in image. Please ensure your face is clear.",
+      });
+    }
+
+    // Check if employee has face enrollment
+    if (!employee.faceEmbedding || employee.faceEmbedding.length === 0) {
+      return res.status(400).json({
+        message: "Employee face not enrolled. Please enroll your face first.",
+      });
+    }
+
+    // Compare faces
+    const similarityScore = getFaceSimilarityScore(
+      employee.faceEmbedding,
+      currentEmbedding
+    );
+    const isMatch = compareFaces(
+      employee.faceEmbedding,
+      currentEmbedding,
+      0.45
+    );
+
+    if (!isMatch) {
+      return res.status(403).json({
+        message: `Face verification failed. Similarity: ${similarityScore.toFixed(
+          2
+        )}%. Please try again.`,
+        similarityScore: similarityScore.toFixed(2),
+      });
+    }
+
+    // Create or update attendance record
+    let attendance = existingAttendance;
+    if (!attendance) {
+      attendance = new Attendance({
+        employeeId: employee._id,
+        employee_id: employee.employee_id,
+        date: startOfDay,
+        month: today.getMonth() + 1,
+        year: today.getFullYear(),
+        punchIn: today,
+        punchInVerified: true,
+        punchInSimilarityScore: similarityScore,
+        attendanceDay: "Present",
+      });
+    } else {
+      attendance.punchIn = today;
+      attendance.punchInVerified = true;
+      attendance.punchInSimilarityScore = similarityScore;
+      attendance.attendanceDay = "Present";
+    }
+
+    await attendance.save();
+
+    res.status(200).json({
+      message: `Punch-In Successful! Face match: ${similarityScore.toFixed(
+        2
+      )}%`,
+      attendance,
+      faceVerification: {
+        verified: true,
+        similarityScore: similarityScore.toFixed(2),
+        timestamp: new Date(),
+      },
+    });
   } catch (err) {
+    console.error("Punch-in error:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Punch Out
+// Punch Out with face recognition
 export const punchOut = async (req, res) => {
   try {
-    const employeeId = req.user.employeeId;
-    if (!employeeId)
-      return res.status(403).json({ message: "Not an employee account" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    const userId = req.user.id || req.user._id;
+    const employee = await Employee.findOne({ user: userId });
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
 
     const today = new Date();
-    const date = new Date(
+    const startOfDay = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate()
     );
+    const endOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 1
+    );
 
-    const attendance = await Attendance.findOne({ employeeId, date });
-    if (!attendance)
+    const attendance = await Attendance.findOne({
+      employeeId: employee._id,
+      date: { $gte: startOfDay, $lt: endOfDay },
+    });
+
+    if (!attendance) {
       return res.status(404).json({ message: "No punch-in found for today" });
-    if (attendance.punchOut)
-      return res.status(400).json({ message: "Already punched out today" });
+    }
 
+    if (attendance.punchOut) {
+      return res.status(400).json({ message: "Already punched out today" });
+    }
+
+    // Extract face embedding from uploaded image
+    const currentEmbedding = await getFaceEmbedding(req.file.path);
+    if (!currentEmbedding) {
+      return res.status(400).json({
+        message: "No face detected in image. Please ensure your face is clear.",
+      });
+    }
+
+    // Compare faces
+    const similarityScore = getFaceSimilarityScore(
+      employee.faceEmbedding,
+      currentEmbedding
+    );
+    const isMatch = compareFaces(
+      employee.faceEmbedding,
+      currentEmbedding,
+      0.45
+    );
+
+    if (!isMatch) {
+      return res.status(403).json({
+        message: `Face verification failed. Similarity: ${similarityScore.toFixed(
+          2
+        )}%. Please try again.`,
+        similarityScore: similarityScore.toFixed(2),
+      });
+    }
+
+    // Update punch out
     attendance.punchOut = today;
+    attendance.punchOutVerified = true;
+    attendance.punchOutSimilarityScore = similarityScore;
+
+    // Calculate total work minutes
+    const diffMs = attendance.punchOut - attendance.punchIn;
+    const totalBreakMinutes = attendance.breaks.reduce(
+      (sum, br) => sum + (br.durationMinutes || 0),
+      0
+    );
+    const totalWorkMinutes =
+      Math.floor(diffMs / (1000 * 60)) - totalBreakMinutes;
+
+    attendance.totalWorkMinutes = Math.max(0, totalWorkMinutes);
+
     await attendance.save();
 
-    res.json({ message: "Punched out successfully", attendance });
+    res.json({
+      message: `Punch-Out Successful! Face match: ${similarityScore.toFixed(
+        2
+      )}%`,
+      attendance,
+      faceVerification: {
+        verified: true,
+        similarityScore: similarityScore.toFixed(2),
+        timestamp: new Date(),
+      },
+    });
   } catch (err) {
+    console.error("Punch-out error:", err);
     res.status(500).json({ message: err.message });
   }
 };
