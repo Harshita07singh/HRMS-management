@@ -23,7 +23,7 @@ function Login() {
     try {
       setLoading(true);
       const response = await fetch(
-        "https://hrms-management-backend.onrender.com/api/auth/login",
+        `${process.env.REACT_APP_BASE_URL}/api/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
