@@ -37,8 +37,9 @@ app.use(
 );
 
 // Handle preflight OPTIONS requests
-app.options("*", (req, res) => {
-  res.sendStatus(204);
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") res.sendStatus(204);
+  else next();
 });
 
 app.use(express.json());
