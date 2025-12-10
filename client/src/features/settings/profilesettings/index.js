@@ -13,7 +13,9 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/employees/me");
+      const res = await axios.get(
+        "https://hrms-management-backend.onrender.com/api/employees/me"
+      );
       setProfile(res.data);
     } catch (err) {
       console.error("Failed to load profile:", err);

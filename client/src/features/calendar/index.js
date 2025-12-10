@@ -7,7 +7,9 @@ import { openRightDrawer } from "../common/rightDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../../utils/globalConstantUtil";
 import { showNotification } from "../common/headerSlice";
 
-const API = axios.create({ baseURL: "http://localhost:4000/api" });
+const API = axios.create({
+  baseURL: "https://hrms-management-backend.onrender.com/api",
+});
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
   if (token) req.headers.Authorization = `Bearer ${token}`;

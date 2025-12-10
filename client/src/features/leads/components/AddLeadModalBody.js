@@ -33,7 +33,7 @@ function AddLeadModalBody({ closeModal }) {
     const fetchManagers = async () => {
       try {
         const response = await fetch(
-          "http://localhost:4000/api/employees/project-managers"
+          "https://hrms-management-backend.onrender.com/api/employees/project-managers"
         );
 
         if (!response.ok) {
@@ -84,13 +84,16 @@ function AddLeadModalBody({ closeModal }) {
       };
 
       try {
-        const response = await fetch("http://localhost:4000/api/employees", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newLeadObj),
-        });
+        const response = await fetch(
+          "https://hrms-management-backend.onrender.com/api/employees",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newLeadObj),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to save lead");

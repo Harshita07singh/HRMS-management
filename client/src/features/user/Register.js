@@ -15,11 +15,14 @@ const Register = () => {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:4000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
-      });
+      const res = await fetch(
+        "https://hrms-management-backend.onrender.com/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password, role }),
+        }
+      );
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");

@@ -25,9 +25,12 @@ function Header() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:4000/api/employees/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://hrms-management-backend.onrender.com/api/employees/me",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const data = await res.json();
       if (res.ok) setProfile(data);

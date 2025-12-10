@@ -104,8 +104,8 @@ const Leave = () => {
       setLoading(true);
       const url =
         role === "Employee"
-          ? `http://localhost:4000/api/leaves/my-leaves?page=${page}&limit=${limit}`
-          : `http://localhost:4000/api/leaves?page=${page}&limit=${limit}`;
+          ? `https://hrms-management-backend.onrender.com/api/leaves/my-leaves?page=${page}&limit=${limit}`
+          : `https://hrms-management-backend.onrender.com/api/leaves?page=${page}&limit=${limit}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -181,14 +181,17 @@ const Leave = () => {
             }
           : form;
 
-      const res = await fetch("http://localhost:4000/api/leaves/apply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "https://hrms-management-backend.onrender.com/api/leaves/apply",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Leave application failed");
@@ -224,14 +227,17 @@ const Leave = () => {
   // Approve/Reject Leave
   const handleStatusChange = async (id, status) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/leaves/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(
+        `https://hrms-management-backend.onrender.com/api/leaves/${id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update status");

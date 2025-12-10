@@ -5,7 +5,7 @@ import Pagination from "../../components/Pagination";
 
 export default function InvoiceDashboard() {
   const axiosInstance = axios.create({
-    baseURL: "http://localhost:4000/api", // adjust if needed
+    baseURL: "https://hrms-management-backend.onrender.com/api", // adjust if needed
   });
 
   axiosInstance.interceptors.request.use((config) => {
