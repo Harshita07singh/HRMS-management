@@ -31,6 +31,13 @@ app.use(
     credentials: true, // allow cookies / tokens
   })
 );
+app.options(
+  "*",
+  cors({
+    origin: "https://hrms-management-frontend.onrender.com",
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // route
