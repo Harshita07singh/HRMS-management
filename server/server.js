@@ -4,55 +4,57 @@ import "dotenv/config";
 import connectDB from "./config/mongodb.js";
 import authRoutes from "./routes/authRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
-import dotenv from "dotenv";
 import leaveRoutes from "./routes/leaveRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import attendanceRoutes from "./routes/attendenceRoutes.js";
 import payrollRoutes from "./routes/payrollRoutes.js";
 import { loadModels } from "./utils/faceRecognition.js";
 
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// DB
 connectDB();
 
-// Initialize face recognition models
+// Load models
 (async () => {
   try {
     await loadModels();
   } catch (error) {
-    console.error("Failed to load face recognition models:", error);
+    console.error("Model loading error:", error);
   }
 })();
 
+// CORS
 app.use(
   cors({
-    origin: "https://hrms-management-frontend.onrender.com", // your React app URL
-    credentials: true, // allow cookies / tokens
-  })
-);
-app.options(
-  "*",
-  cors({
-    origin: "https://hrms-management-frontend.onrender.com",
+    origin: [
+      "https://hrms-management-frontend.onrender.com",
+      "http://localhost:3000",
+    ],
     credentials: true,
   })
 );
+
+// Handle preflight OPTIONS requests
+app.options("*", (req, res) => {
+  res.sendStatus(204);
+});
+
 app.use(express.json());
 
-// route
+// ROUTES
 app.use("/api/auth", authRoutes);
-
 app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payroll", payrollRoutes);
+
+// Root route
 app.get("/", (req, res) => {
-  res.send("Hello,  Your server is running 🚀");
+  res.send("Server running 🚀");
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
+// START SERVER
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
