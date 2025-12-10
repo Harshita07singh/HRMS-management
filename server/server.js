@@ -27,8 +27,8 @@ connectDB();
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // your React app URL
-    credentials: true, // allow cookies / tokens
+    origin: true, // allow all origins for production
+    credentials: false, // disable credentials since no cookies are used
   })
 );
 app.use(express.json());
