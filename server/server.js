@@ -27,7 +27,7 @@ connectDB();
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // your React app URL
+    origin: "https://hrms-management-frontend.onrender.com", // your React app URL
     credentials: true, // allow cookies / tokens
   })
 );
