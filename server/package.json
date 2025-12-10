@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
-    "build": "npm rebuild canvas"
+    "build": "rm -rf node_modules package-lock.json && npm install",
+    "postinstall": "npm rebuild canvas"
   },
   "author": "",
   "license": "ISC",
