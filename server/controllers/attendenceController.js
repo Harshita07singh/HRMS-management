@@ -13,8 +13,11 @@ export const punchIn = async (req, res) => {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    const userId = req.user.id || req.user._id;
-    const employee = await Employee.findOne({ user: userId });
+    if (!req.user.employeeId) {
+      return res.status(403).json({ message: "Not an employee account" });
+    }
+
+    const employee = await Employee.findById(req.user.employeeId);
 
     if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
@@ -50,31 +53,34 @@ export const punchIn = async (req, res) => {
       });
     }
 
+    let similarityScore = 0;
+    let isMatch = false;
+
     // Check if employee has face enrollment
     if (!employee.faceEmbedding || employee.faceEmbedding.length === 0) {
-      return res.status(400).json({
-        message: "Employee face not enrolled. Please enroll your face first.",
-      });
-    }
+      // First-time face enrollment during punch-in
+      employee.faceEmbedding = currentEmbedding;
+      await employee.save();
 
-    // Compare faces
-    const similarityScore = getFaceSimilarityScore(
-      employee.faceEmbedding,
-      currentEmbedding
-    );
-    const isMatch = compareFaces(
-      employee.faceEmbedding,
-      currentEmbedding,
-      0.45
-    );
+      // For first punch-in, skip verification since this is the enrollment
+      isMatch = true;
+      similarityScore = 100; // Perfect match for enrollment
+    } else {
+      // Compare faces for verification
+      similarityScore = getFaceSimilarityScore(
+        employee.faceEmbedding,
+        currentEmbedding
+      );
+      isMatch = compareFaces(employee.faceEmbedding, currentEmbedding, 0.45);
 
-    if (!isMatch) {
-      return res.status(403).json({
-        message: `Face verification failed. Similarity: ${similarityScore.toFixed(
-          2
-        )}%. Please try again.`,
-        similarityScore: similarityScore.toFixed(2),
-      });
+      if (!isMatch) {
+        return res.status(403).json({
+          message: `Face verification failed. Similarity: ${similarityScore.toFixed(
+            2
+          )}%. Please try again.`,
+          similarityScore: similarityScore.toFixed(2),
+        });
+      }
     }
 
     // Create or update attendance record
@@ -124,8 +130,11 @@ export const punchOut = async (req, res) => {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    const userId = req.user.id || req.user._id;
-    const employee = await Employee.findOne({ user: userId });
+    if (!req.user.employeeId) {
+      return res.status(403).json({ message: "Not an employee account" });
+    }
+
+    const employee = await Employee.findById(req.user.employeeId);
 
     if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
@@ -164,24 +173,34 @@ export const punchOut = async (req, res) => {
       });
     }
 
-    // Compare faces
-    const similarityScore = getFaceSimilarityScore(
-      employee.faceEmbedding,
-      currentEmbedding
-    );
-    const isMatch = compareFaces(
-      employee.faceEmbedding,
-      currentEmbedding,
-      0.45
-    );
+    let similarityScore = 0;
+    let isMatch = false;
 
-    if (!isMatch) {
-      return res.status(403).json({
-        message: `Face verification failed. Similarity: ${similarityScore.toFixed(
-          2
-        )}%. Please try again.`,
-        similarityScore: similarityScore.toFixed(2),
-      });
+    // Check if employee has face enrollment
+    if (!employee.faceEmbedding || employee.faceEmbedding.length === 0) {
+      // First-time face enrollment during punch-out (edge case)
+      employee.faceEmbedding = currentEmbedding;
+      await employee.save();
+
+      // For first interaction, skip verification since this is the enrollment
+      isMatch = true;
+      similarityScore = 100; // Perfect match for enrollment
+    } else {
+      // Compare faces for verification
+      similarityScore = getFaceSimilarityScore(
+        employee.faceEmbedding,
+        currentEmbedding
+      );
+      isMatch = compareFaces(employee.faceEmbedding, currentEmbedding, 0.45);
+
+      if (!isMatch) {
+        return res.status(403).json({
+          message: `Face verification failed. Similarity: ${similarityScore.toFixed(
+            2
+          )}%. Please try again.`,
+          similarityScore: similarityScore.toFixed(2),
+        });
+      }
     }
 
     // Update punch out

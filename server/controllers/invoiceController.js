@@ -126,7 +126,7 @@ export const createInvoice = async (req, res) => {
       };
 
       await transporter.sendMail(mailOptions);
-      console.log(`📧 Invoice email sent to ${email}`);
+      console.log(` Invoice email sent to ${email}`);
     }
 
     res.status(201).json({ message: "Invoice created & email sent", invoice });

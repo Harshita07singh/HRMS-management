@@ -474,11 +474,11 @@ const Attendance = () => {
 
         {/* Submit Button for Face Capture */}
         {selfieBlob && showFaceCapture && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
             <button
               onClick={handleFaceCaptureSubmit}
               disabled={isProcessing}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all cursor-pointer"
             >
               {isProcessing ? (
                 <>

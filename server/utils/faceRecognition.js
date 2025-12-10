@@ -36,36 +36,63 @@ export const getFaceEmbedding = async (imagePath) => {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0);
 
-          const detections = await faceapi
+          // Try different detection methods for better robustness
+          let detections = await faceapi
             .detectSingleFace(canvas)
             .withFaceLandmarks()
             .withFaceDescriptor();
 
+          // If failed, try with higher detection score
           if (!detections) {
+            detections = await faceapi
+              .detectSingleFace(
+                canvas,
+                new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
+              )
+              .withFaceLandmarks()
+              .withFaceDescriptor();
+          }
+
+          if (!detections) {
+            console.log(`No face detected in image: ${imagePath}`);
             resolve(null);
           } else {
+            console.log(`Face detected successfully in image: ${imagePath}`);
             // Convert Float32Array to regular array for storage
             resolve(Array.from(detections.descriptor));
           }
         } catch (error) {
+          console.error("Face detection error:", error);
           reject(error);
         }
       };
 
-      img.onerror = () => reject(new Error("Failed to load image"));
+      img.onerror = () => {
+        console.error(`Failed to load image: ${imagePath}`);
+        reject(new Error("Failed to load image"));
+      };
+
+      // Use Buffer instead of raw buffer for proper image data
       img.src = imageBuffer;
     });
   } catch (error) {
     console.error("Error extracting face embedding:", error);
     return null;
+  } finally {
+    // Clean up uploaded file
+    try {
+      await fs.promises.unlink(imagePath);
+    } catch (unlinkErr) {
+      console.warn("Could not delete uploaded file:", unlinkErr);
+    }
   }
 };
 
-// Compare two embeddings (Euclidean distance)
+// Compare two embeddings using Euclidean distance
 export const compareFaces = (
   storedEmbedding,
   currentEmbedding,
-  threshold = 0.45
+  threshold = 0.6
 ) => {
   if (!storedEmbedding || !currentEmbedding) {
     return false;
@@ -114,7 +141,8 @@ export const getFaceSimilarityScore = (storedEmbedding, currentEmbedding) => {
     const distance = Math.sqrt(sumSquaredDiff);
 
     // Convert distance to similarity score (0-100)
-    const similarity = Math.max(0, 100 - distance * 100);
+    // Normalize: distance 0 = 100% match, distance >= 1 = 0% match
+    const similarity = Math.max(0, Math.min(100, (1 - distance) * 100));
     return similarity;
   } catch (error) {
     console.error("Error calculating similarity score:", error);
