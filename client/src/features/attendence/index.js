@@ -5,7 +5,7 @@ import Pagination from "../../components/Pagination";
 import FaceCaptureModal from "../../components/FaceCapture/FaceCaptureModal";
 
 const API = axios.create({
-  baseURL: "https://hrms-management-backend.onrender.com/api",
+  baseURL: `${process.env.REACT_APP_BASE_URL}/api`,
 });
 
 API.interceptors.request.use((req) => {

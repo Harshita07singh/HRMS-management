@@ -3,7 +3,7 @@ import axios from "axios";
 import TitleCard from "../../../components/Cards/TitleCard";
 
 const API = axios.create({
-  baseURL: "https://hrms-management-backend.onrender.com/api",
+  baseURL: `${process.env.REACT_APP_BASE_URL}/api`,
 });
 
 API.interceptors.request.use((req) => {

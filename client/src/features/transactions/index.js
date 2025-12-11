@@ -4,7 +4,7 @@ import TitleCard from "../../components/Cards/TitleCard";
 import Pagination from "../../components/Pagination";
 
 const API = axios.create({
-  baseURL: "https://hrms-management-backend.onrender.com/api",
+  baseURL: `${process.env.REACT_APP_BASE_URL}/api`,
 });
 
 API.interceptors.request.use((req) => {

@@ -14,7 +14,7 @@ export default function Profile() {
   const fetchProfile = async () => {
     try {
       const res = await axios.get(
-        "https://hrms-management-backend.onrender.com/api/employees/me"
+        `${process.env.REACT_APP_BASE_URL}/api/employees/me`
       );
       setProfile(res.data);
     } catch (err) {

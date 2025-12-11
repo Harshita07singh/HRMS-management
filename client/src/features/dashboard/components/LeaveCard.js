@@ -22,8 +22,8 @@ const Leave = () => {
       setLoading(true);
       const url =
         role === "Employee"
-          ? "https://hrms-management-backend.onrender.com/api/leaves/my-leaves?page=1&limit=10"
-          : "https://hrms-management-backend.onrender.com/api/leaves?page=1&limit=10";
+          ? `${process.env.REACT_APP_BASE_URL}/api/leaves/my-leaves?page=1&limit=10`
+          : `${process.env.REACT_APP_BASE_URL}/api/leaves?page=1&limit=10`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },

@@ -22,10 +22,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email });
+    console.log("Login attempt for email:", user);
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const valid = await bcrypt.compare(password, user.password);
+    console.log("Login attempt for valid:", valid);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
     const employee = await Employee.findOne({ email });

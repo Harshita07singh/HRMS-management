@@ -104,8 +104,8 @@ const Leave = () => {
       setLoading(true);
       const url =
         role === "Employee"
-          ? `https://hrms-management-backend.onrender.com/api/leaves/my-leaves?page=${page}&limit=${limit}`
-          : `https://hrms-management-backend.onrender.com/api/leaves?page=${page}&limit=${limit}`;
+          ? `${process.env.REACT_APP_BASE_URL}/api/leaves/my-leaves?page=${page}&limit=${limit}`
+          : `${process.env.REACT_APP_BASE_URL}/api/leaves?page=${page}&limit=${limit}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -182,7 +182,7 @@ const Leave = () => {
           : form;
 
       const res = await fetch(
-        "https://hrms-management-backend.onrender.com/api/leaves/apply",
+        `${process.env.REACT_APP_BASE_URL}/api/leaves/apply`,
         {
           method: "POST",
           headers: {
@@ -228,7 +228,7 @@ const Leave = () => {
   const handleStatusChange = async (id, status) => {
     try {
       const res = await fetch(
-        `https://hrms-management-backend.onrender.com/api/leaves/${id}/status`,
+        `${process.env.REACT_APP_BASE_URL}/api/leaves/${id}/status`,
         {
           method: "PATCH",
           headers: {

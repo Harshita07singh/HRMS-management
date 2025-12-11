@@ -6,7 +6,7 @@ export const getLeadsContent = createAsyncThunk(
   "leads/content",
   async ({ page = 1, limit = 10 } = {}) => {
     const response = await axios.get(
-      `https://hrms-management-backend.onrender.com/api/employees?page=${page}&limit=${limit}`
+      `${process.env.REACT_APP_BASE_URL}/api/employees?page=${page}&limit=${limit}`
     );
     return response.data;
   }
@@ -17,7 +17,7 @@ export const deleteLeadFromServer = createAsyncThunk(
   "leads/delete",
   async (id) => {
     const response = await axios.delete(
-      `https://hrms-management-backend.onrender.com/api/employees/${id}`
+      `${process.env.REACT_APP_BASE_URL}/api/employees/${id}`
     );
     return id; // return the deleted ID so reducer can remove it
   }

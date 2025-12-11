@@ -26,7 +26,7 @@ function Header() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        "https://hrms-management-backend.onrender.com/api/employees/me",
+        `${process.env.REACT_APP_BASE_URL}/api/employees/me`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

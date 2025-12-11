@@ -33,7 +33,7 @@ function AddLeadModalBody({ closeModal }) {
     const fetchManagers = async () => {
       try {
         const response = await fetch(
-          "https://hrms-management-backend.onrender.com/api/employees/project-managers"
+          `${process.env.REACT_APP_BASE_URL}/api/employees/project-managers`
         );
 
         if (!response.ok) {
@@ -85,7 +85,7 @@ function AddLeadModalBody({ closeModal }) {
 
       try {
         const response = await fetch(
-          "https://hrms-management-backend.onrender.com/api/employees",
+          `${process.env.REACT_APP_BASE_URL}/api/employees`,
           {
             method: "POST",
             headers: {

@@ -16,7 +16,7 @@ const Register = () => {
 
     try {
       const res = await fetch(
-        "https://hrms-management-backend.onrender.com/api/auth/register",
+        `${process.env.REACT_APP_BASE_URL}/api/auth/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
